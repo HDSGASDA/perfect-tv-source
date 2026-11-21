@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Test connection</string>
+    <string name="set_a_test_playlist_expl">Check the login and count available channels and titles</string>
+    <string name="set_a_testing_playlist">Checking login and catalogue…</string>
+</resources>

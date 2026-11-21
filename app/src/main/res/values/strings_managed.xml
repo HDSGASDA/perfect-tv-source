@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Server configured: %1$s</string>
+    <string name="managed_server_unknown">Managed server</string>
+    <string name="managed_server_removed">This server was removed or changed. Select a server above and enter your login again.</string>
+    <string name="managed_saved_retry"> Your new server selection was saved, but loading failed. Check the login and try again.</string>
+    <string name="managed_notice">Choose a server supplied by your service. Switching servers clears the login fields. This app checks a separate management panel for announcements, server choices and app updates while open. Your provider login is not sent to the management panel. Updates require installation confirmation.</string>
+    <string name="managed_message_dismiss">Dismiss message</string>
+    <string name="managed_message_sender">Service announcement</string>
+</resources>

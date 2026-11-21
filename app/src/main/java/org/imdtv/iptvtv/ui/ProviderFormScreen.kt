@@ -1,0 +1,223 @@
+package org.imdtv.iptvtv.ui
+
+import org.imdtv.iptvtv.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.tv.material3.Button
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import org.imdtv.iptvtv.data.db.ProviderEntity
+import org.imdtv.iptvtv.data.db.ProviderType
+
+/** Add a playlist, or edit [editId]'s URL, login and user agent (its EPG sources are managed in Settings). */
+@Composable
+fun ProviderFormScreen(vm: AppViewModel, editId: Long? = null) {
+    // Wait for the playlist being edited so the fields start filled in.
+    val editing by produceState<ProviderEntity?>(null, editId) { value = editId?.let { vm.provider(it) } }
+    if (editId != null && editing == null) return
+    key(editing?.id) { ProviderForm(vm, editing) }
+}
+
+@Composable
+private fun ProviderForm(vm: AppViewModel, editing: ProviderEntity?) {
+    val state by vm.form.collectAsState()
+    val serverConfig by vm.managedServers.collectAsState()
+    var type by rememberSaveable { mutableStateOf(if (org.imdtv.iptvtv.BuildConfig.MANAGED) ProviderType.XTREAM else editing?.type ?: ProviderType.XTREAM) }
+    var url by rememberSaveable { mutableStateOf(editing?.url ?: if (org.imdtv.iptvtv.BuildConfig.MANAGED) serverConfig.servers.first { it.id == serverConfig.defaultServerId }.url else "") }
+    var selectedServerId by rememberSaveable { mutableStateOf(editing?.managedServerId ?: serverConfig.servers.firstOrNull { org.imdtv.iptvtv.data.management.ManagedProvider.accepts(ProviderType.XTREAM, url, it.url) }?.id) }
+    var user by rememberSaveable { mutableStateOf(editing?.username.orEmpty()) }
+    var pass by rememberSaveable { mutableStateOf(editing?.password.orEmpty().substringBefore('\n')) }
+    // Stalker keeps "serial\ndeviceId\ndeviceId2\nmodel" in the password column (StalkerLogin); the form shows them as separate fields.
+    val stalkerEdit = editing?.takeIf { it.type == ProviderType.STALKER }?.let { org.imdtv.iptvtv.data.source.StalkerLogin.from(it.username, it.password) }
+    var deviceId by rememberSaveable { mutableStateOf(stalkerEdit?.deviceId.orEmpty()) }
+    var deviceId2 by rememberSaveable { mutableStateOf(stalkerEdit?.deviceId2.orEmpty()) }
+    var model by rememberSaveable { mutableStateOf(stalkerEdit?.model.orEmpty()) }
+    var epg by rememberSaveable { mutableStateOf("") }
+    var agent by rememberSaveable { mutableStateOf(editing?.userAgent.orEmpty()) }
+
+    var name by rememberSaveable { mutableStateOf(editing?.name.orEmpty()) }
+    var sendLogs by remember { mutableStateOf(false) }
+    val ready = state.result != null
+    val next = remember { FocusRequester() }
+    val save = remember { FocusRequester() }
+    // What was typed may never have been saved (a failed add is removed), so the scrubber is given it directly.
+    if (sendLogs) org.imdtv.iptvtv.ui.settings.SendLogsPage(listOf(user, pass, deviceId, deviceId2)) { sendLogs = false; runCatching { save.requestFocus() } }
+    LaunchedEffect(ready) { if (ready) runCatching { next.requestFocus() } } // Save has gone: focus Watch/Done, not the top
+    // One 1080p screen (960×540 dp): labels sit beside the fields, progress and Watch on the right.
+    // Scrolls only when the Name box is open on the tallest (Stalker) form.
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 48.dp, vertical = 28.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(if (editing == null) stringResource(R.string.set_b_add_playlist) else stringResource(R.string.set_b_edit_playlist, editing.name), style = MaterialTheme.typography.headlineSmall, color = Color.White)
+        Row(horizontalArrangement = Arrangement.spacedBy(32.dp)) {
+            Column(Modifier.width(560.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (editing == null && !org.imdtv.iptvtv.BuildConfig.MANAGED) Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ProviderType.entries.forEach { t ->
+                        Button(onClick = { type = t }) { Text((if (t == type) "● " else "○ ") + t.name) }
+                    }
+                }
+                if (org.imdtv.iptvtv.BuildConfig.MANAGED) {
+                    val selectedServer = serverConfig.servers.find { it.id == selectedServerId }
+                        ?: serverConfig.servers.find { org.imdtv.iptvtv.data.management.ManagedProvider.accepts(ProviderType.XTREAM, url, it.url) }
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        serverConfig.servers.forEach { server ->
+                            Button(enabled = !state.busy && !ready, onClick = {
+                                if (selectedServer?.id != server.id) {
+                                    // Never silently forward a saved login to a new destination, even if a server ID is reused.
+                                    user = ""; pass = ""
+                                    url = server.url
+                                    selectedServerId = server.id
+                                }
+                            }) { Text((if (selectedServer?.id == server.id) "● " else "○ ") + server.name) }
+                        }
+                    }
+                    Text(
+                        stringResource(
+                            R.string.managed_server_configured,
+                            selectedServer?.name ?: stringResource(R.string.managed_server_unknown),
+                        ),
+                        color = Color.LightGray,
+                        fontSize = 14.sp,
+                    )
+                    if (selectedServer == null) Text(stringResource(R.string.managed_server_removed), color = Color(0xFFFF8A80), fontSize = 13.sp)
+                    Text(stringResource(R.string.managed_notice), color = Color.LightGray, fontSize = 12.sp)
+                } else FormField(stringResource(when (type) { ProviderType.XTREAM -> R.string.set_b_server_url; ProviderType.M3U -> R.string.set_b_playlist_url; ProviderType.STALKER -> R.string.set_b_portal_url }),
+                    url, KeyboardType.Uri) { url = it }
+                if (type == ProviderType.STALKER) {
+                    FormField(stringResource(R.string.set_b_mac_form), user, KeyboardType.Password) { user = it }
+                    FormField(stringResource(R.string.set_b_serial_optional), pass, KeyboardType.Password) { pass = it }
+                    FormField(stringResource(R.string.set_b_device_id), deviceId, KeyboardType.Password) { deviceId = it }
+                    FormField(stringResource(R.string.set_b_device_id2), deviceId2, KeyboardType.Password) { deviceId2 = it }
+                    FormField(stringResource(R.string.set_b_stb_model), model, KeyboardType.Password) { model = it }
+                } else if (type == ProviderType.XTREAM) {
+                    // The password keyboard has the number row many providers' usernames need.
+                    FormField(stringResource(R.string.set_b_username), user, KeyboardType.Password) { user = it }
+                    FormField(stringResource(R.string.set_b_password), pass, KeyboardType.Password, secret = true) { pass = it }
+                } else if (editing == null) {
+                    FormField(stringResource(R.string.set_b_epg_urls), epg, KeyboardType.Uri) { epg = it }
+                }
+                FormField(stringResource(R.string.set_b_user_agent), agent) { agent = it }
+                org.imdtv.iptvtv.ui.settings.EditRow(stringResource(R.string.set_b_name_optional), stringResource(R.string.set_b_name_expl),
+                    // Down goes to Save: the nearest-below search picked "Refresh guide now".
+                    modifier = Modifier.focusProperties { if (!ready) down = save },
+                    value = name.ifBlank { stringResource(R.string.set_b_automatic) }, initial = name, saveLabel = stringResource(R.string.set_b_confirm)) { name = it } // "Save" here read as the form's Save (user, 2026-11-15)
+                if (!ready) {
+                    // The buttons stay while busy: if Save left the screen, focus fell to the top and the error showed off screen.
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        Button(onClick = {
+                            if (state.busy) return@Button
+                            val secret = if (type == ProviderType.STALKER) org.imdtv.iptvtv.data.source.StalkerLogin(user, pass, deviceId, deviceId2, model).packed().orEmpty() else pass
+                            vm.save(type, url, user, secret, epg, agent, editing, name, selectedServerId)
+                        }, Modifier.focusRequester(save)) { Text(stringResource(R.string.set_b_save)) }
+                        if (vm.canLeaveSetup && editing == null) Button(onClick = vm::refreshGuide) { Text(stringResource(R.string.set_b_refresh_guide)) }
+                        // Beside Save, not above it: a line above pushed Save off the bottom of the Stalker form.
+                        if (!state.busy && state.error != null) Button(onClick = { sendLogs = true }) { Text(stringResource(R.string.set_b_send_logs)) }
+                        if (!state.busy) state.error?.let { Text(it, color = Color(0xFFFF8A80), fontSize = 13.sp, maxLines = 3, modifier = Modifier.weight(1f)) }
+                    }
+                }
+            }
+            Column(Modifier.width(240.dp).padding(top = if (editing == null) 56.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Greyed out (not pressable) until the playlist has loaded.
+                Button(onClick = { if (editing == null) vm.done() else vm.back() }, Modifier.focusRequester(next), enabled = ready) {
+                    Text(if (editing == null) stringResource(R.string.set_b_watch) else stringResource(R.string.set_b_done))
+                }
+                if (state.busy) {
+                    Spinner(size = 32.dp)
+                    Text(state.progress ?: stringResource(R.string.set_b_loading_playlist), color = Color.White, fontSize = 14.sp)
+                }
+                state.result?.let { Text(it, color = Color.White, fontSize = 14.sp) }
+            }
+        }
+    }
+}
+
+/** A [Field] with its label on the left, so the form fits one screen. */
+@Composable
+private fun FormField(label: String, value: String, keyboard: KeyboardType = KeyboardType.Text, secret: Boolean = false, onChange: (String) -> Unit) {
+    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Text(label, color = Color.LightGray, fontSize = 14.sp, modifier = Modifier.width(170.dp))
+        Column(Modifier.weight(1f)) { Field("", value, keyboard, secret, openOnOk = true, onChange = onChange) }
+    }
+}
+
+@Composable
+fun Field(
+    label: String, value: String, keyboard: KeyboardType = KeyboardType.Text, secret: Boolean = false,
+    modifier: Modifier = Modifier, openOnOk: Boolean = false, onChange: (String) -> Unit,
+) {
+    // openOnOk: read-only until OK, so D-pad can pass through a form without a keyboard on every field.
+    var editing by remember { mutableStateOf(!openOnOk) }
+    val keyboardCtl = LocalSoftwareKeyboardController.current
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    val focus = LocalFocusManager.current
+    Column {
+        if (label.isNotEmpty()) Text(label, color = Color.LightGray)
+        BasicTextField(
+            value = value, onValueChange = onChange, singleLine = !label.startsWith("EPG"), readOnly = !editing,
+            interactionSource = interaction,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboard, imeAction = ImeAction.Next),
+            keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
+            visualTransformation = if (secret) PasswordVisualTransformation() else VisualTransformation.None,
+            textStyle = androidx.tv.material3.LocalTextStyle.current.merge(TextStyle(color = Color.White, fontSize = 20.sp)),
+            cursorBrush = SolidColor(Color.White),
+            // A text field keeps Up/Down as cursor moves, which traps a D-pad: use them to leave the field.
+            modifier = modifier.onPreviewKeyEvent { e ->
+                if (e.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                when (e.key) {
+                    Key.DirectionDown -> { focus.moveFocus(FocusDirection.Down); true }
+                    Key.DirectionUp -> { focus.moveFocus(FocusDirection.Up); true }
+                    Key.DirectionCenter, Key.Enter -> if (editing) false else { editing = true; keyboardCtl?.show(); true }
+                    else -> false
+                }
+            }.onFocusChanged { if (openOnOk && !it.isFocused) editing = false }.fillMaxWidth()
+                .border(2.dp, if (focused) Color.White else Color.Gray, RoundedCornerShape(8.dp))
+                .padding(12.dp),
+        )
+    }
+}
