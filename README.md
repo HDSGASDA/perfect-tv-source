@@ -75,6 +75,10 @@ Requires Android TV / Google TV **8.0 or newer** (tested on Chromecast with Goog
    `adb install imd-tv.apk`. Or copy the file to a USB drive and open it with a file manager app on the TV.
 3. Open IMD TV and add your Xtream login, M3U link or Stalker portal.
 
+## Cloudflare hosting
+
+Cloudflare Pages, the managed-app API and optional R2 APK delivery can be set up using the free-tier options. See [CLOUDFLARE_SETUP.md](CLOUDFLARE_SETUP.md) for setup instructions, limits and the free-first design.
+
 ## Build from source
 
 You need JDK 17 and the Android SDK (platform 35), or Android Studio.
