@@ -1,4 +1,4 @@
-# Publishing Android releases
+﻿# Publishing Android releases
 
 A release is built and attached to GitHub automatically when a version tag beginning with `v` is pushed (for example, `v0.6.1`). The workflow builds the signed `standardRelease` APK, names it `imd-tv.apk`, creates a SHA-256 checksum, and publishes both files as assets on a GitHub Release. It does not upload the managed flavor to Cloudflare R2.
 
@@ -6,7 +6,7 @@ A release is built and attached to GitHub automatically when a version tag begin
 
 Android requires updates to be signed with the same key as the installed app. If this app has already been distributed under the same Android package name, use its existing signing key; a different key will prevent in-place updates. Keep a protected backup of the keystore and its passwords. Never commit or send them in chat.
 
-In the GitHub repository, open **Settings → Secrets and variables → Actions → New repository secret**, then add these four secrets:
+In the GitHub repository, open **Settings ΓåÆ Secrets and variables ΓåÆ Actions ΓåÆ New repository secret**, then add these four secrets:
 
 - `ANDROID_KEYSTORE_BASE64`: base64 encoding of the `.jks` or `.keystore` signing file.
 - `ANDROID_KEYSTORE_PASSWORD`: keystore password.
