@@ -7,3 +7,7 @@ binding = "DB"
 database_name = "imd-tv-panel"
 database_id = "962ca3b8-298d-4081-b72b-72b200fc0db0"
 migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "APK_BUCKET"
+bucket_name = "imd-tv-apks"

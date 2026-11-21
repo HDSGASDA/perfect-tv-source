@@ -12,13 +12,7 @@ The repository is configured for:
 - D1 database: `imd-tv-panel` (binding `DB`)
 - R2 bucket: `imd-tv-apks` (binding `APK_BUCKET`), required for APK uploads and download
 
-The Cloudflare account currently has R2 disabled. Enable R2 in the Cloudflare dashboard and create the bucket before expecting release uploads to work. Until then, the API, login, server configuration, and messages work; the release upload endpoint returns 503. After enabling R2 and creating the bucket, add the `APK_BUCKET` R2 binding to the Pages project for both production and preview environments. The R2 binding is intentionally not in `wrangler.toml` until the account enables the product.
-
-Create the bucket once R2 is enabled:
-
-```sh
-npx wrangler r2 bucket create imd-tv-apks
-```
+The R2 bucket is configured in `wrangler.toml` as the `APK_BUCKET` binding. The account must have R2 enabled and the `imd-tv-apks` bucket must exist before deploying this configuration.
 
 The D1 database ID is recorded in `wrangler.toml`. Do not commit API tokens, passwords, signing keys, `.dev.vars`, or APK backups.
 
