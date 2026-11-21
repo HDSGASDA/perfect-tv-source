@@ -1,5 +1,7 @@
 .superpowers/
 local.properties
+.wrangler/
+.dev.vars
 build/
 .gradle/
 .kotlin/

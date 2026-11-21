@@ -1,52 +1,91 @@
-# Cloudflare free-tier hosting
+# Cloudflare Pages deployment
 
-This project can host its static website and its small managed-app API on Cloudflare Pages. The release APK can live in Cloudflare R2 and be streamed from the same site origin. The ordinary Android app continues to download public releases from GitHub and connects directly to each user's IPTV provider; this project deliberately does not proxy video streams.
+The Rust dashboard is implemented as Cloudflare Pages Functions. Pages serves the dashboard UI and API from the same origin; D1 replaces the Rust process's SQLite database, and R2 stores uploaded managed APKs.
 
-The Pages and Workers free plan has usage limits. R2 includes a free monthly allowance (including storage, operations and internet egress), but usage beyond the free allowance can be billed. Review the current [Pages limits](https://developers.cloudflare.com/pages/platform/limits/), [Workers pricing](https://developers.cloudflare.com/workers/platform/pricing/) and [R2 pricing](https://developers.cloudflare.com/r2/pricing/) before launch, and set account billing alerts. No paid product is required by this repository's setup.
+Production URL: `https://imd-tv.pages.dev`
 
-## One-time Cloudflare setup
+## Cloudflare resources
 
-1. The Cloudflare Pages project `imd-tv` has been created in the connected account; its default hostname is `imd-tv.pages.dev`. In Cloudflare, set its production branch to `main` and use the root `site` directory as the build output. The workflow below deploys via Wrangler direct upload.
-2. Enable R2 in the Cloudflare dashboard if it is not already enabled, then create an R2 bucket named `imd-tv-apks`. Upload the signed managed APK as `managed/latest.apk` when publishing a managed release. Keep an independent copy of the APK and signing key; R2 is delivery, not the only backup.
+The repository is configured for:
 
-The R2 binding is intentionally not included in `wrangler.toml` yet because R2 must first be enabled on the account. Once the bucket exists, add the following Pages production and preview binding in the Cloudflare dashboard, or add this block to the Wrangler configuration before deploying:
+- Pages project: `imd-tv`
+- D1 database: `imd-tv-panel` (binding `DB`)
+- R2 bucket: `imd-tv-apks` (binding `APK_BUCKET`), required for APK uploads and download
 
-```toml
-[[r2_buckets]]
-binding = "APK_BUCKET"
-bucket_name = "imd-tv-apks"
+The Cloudflare account currently has R2 disabled. Enable R2 in the Cloudflare dashboard and create the bucket before expecting release uploads to work. Until then, the API, login, server configuration, and messages work; the release upload endpoint returns 503. After enabling R2 and creating the bucket, add the `APK_BUCKET` R2 binding to the Pages project for both production and preview environments. The R2 binding is intentionally not in `wrangler.toml` until the account enables the product.
+
+Create the bucket once R2 is enabled:
+
+```sh
+npx wrangler r2 bucket create imd-tv-apks
 ```
 
-3. GitHub is the source repository and CI system; Cloudflare Pages hosts the website. In GitHub repository settings, add Actions secrets `CLOUDFLARE_API_TOKEN` (an account-scoped token with `Pages Write` for the account containing `imd-tv`) and `CLOUDFLARE_ACCOUNT_ID`. The workflow in `.github/workflows/cloudflare-pages.yml` deploys the site and Pages Functions on pushes to `main` that touch those files. The repository does not use GitHub Pages. The current workflow does not upload objects to R2, so R2 permissions are not needed for this deployment until an R2 upload step is added.
-4. The Pages project already has `APP_CONFIG_JSON` and `APP_MESSAGES_JSON` configured for both production and preview. The initial config points at the server origin already present in the managed Gradle build, and the message feed starts empty. Update either variable in the dashboard whenever the public server list or notice feed changes. Add `APP_RELEASES_JSON` for each managed release after a signed managed APK and its SHA-256 are ready. These are public responses; never put credentials, API tokens, IPTV provider details or private signing material in them.
+The D1 database ID is recorded in `wrangler.toml`. Do not commit API tokens, passwords, signing keys, `.dev.vars`, or APK backups.
 
-`APP_CONFIG_JSON` example:
+## First deployment
 
-```json
-{"revision":1,"servers":[{"id":"primary","name":"Primary server","url":"https://stream.example.com"}],"defaultServerId":"primary"}
+From the repository root, authenticate Wrangler and deploy:
+
+```sh
+npx wrangler login
+npx wrangler d1 migrations apply imd-tv-panel --remote
+npx wrangler pages deploy site --project-name=imd-tv --branch=main
 ```
 
-`APP_MESSAGES_JSON` example:
+The GitHub Actions workflow performs the D1 migration and Pages deployment automatically for changes to `site`, `functions`, `migrations`, or the Wrangler configuration. Add these GitHub Actions secrets:
 
-```json
-{"messages":[]}
+- `CLOUDFLARE_API_TOKEN`: account token with Pages Edit and D1 Edit permissions.
+- `CLOUDFLARE_ACCOUNT_ID`: the account containing the Pages project and bindings.
+
+The Pages production and preview environments must have the `DB` D1 and `APK_BUCKET` R2 bindings. The committed Wrangler configuration supplies those bindings for Wrangler deployments; verify them in the Pages project settings after the first deployment.
+
+## Create the first administrator
+
+Bootstrap is deliberately one-time and requires a temporary secret. Set `BOOTSTRAP_SECRET` as a Pages production secret, deploy, then run:
+
+```sh
+curl -X POST https://imd-tv.pages.dev/api/admin/bootstrap \
+  -H "Authorization: Bearer YOUR_TEMPORARY_BOOTSTRAP_SECRET" \
+  -H "Content-Type: application/json" \
+  --data '{"username":"admin","password":"replace-with-a-strong-password"}'
 ```
 
-`APP_RELEASES_JSON` example (use the actual package version and SHA-256, and ensure the APK at the R2 key is the same signed file):
+Use a password with at least 12 characters. Remove `BOOTSTRAP_SECRET` immediately after the request succeeds. The endpoint cannot overwrite an existing administrator.
 
-```json
-{"latest":{"versionCode":11,"versionName":"0.6.0-managed.1","apkUrl":"https://imd-tv.pages.dev/downloads/managed.apk","sha256":"REPLACE_WITH_64_HEX_CHARACTERS","notes":"Release notes"},"versions":{"11":{"versionCode":11,"versionName":"0.6.0-managed.1","apkUrl":"https://imd-tv.pages.dev/downloads/managed.apk","sha256":"REPLACE_WITH_64_HEX_CHARACTERS","notes":"Release notes"}}}
+Open `https://imd-tv.pages.dev/admin/` to sign in. The panel uses an HttpOnly, Secure, SameSite cookie and a CSRF token for administrator writes. Public app endpoints do not require a login.
+
+## Managed APK release flow
+
+1. Build the managed Android flavor with `panelBaseUrl=https://imd-tv.pages.dev`.
+2. Open the production admin panel.
+3. Upload the signed APK with its version code, release name, release notes, and GPL corresponding-source URL.
+4. The Pages Function checks the ZIP archive, binary Android manifest, managed package name, manifest version code/name, and signing artifacts, then computes SHA-256 and stores the APK in R2 as a draft.
+5. Publish the draft from the panel.
+
+The app reads:
+
+```text
+GET /api/app/config
+GET /api/app/messages
+GET /api/app/releases/latest
+GET /api/app/releases/{version}
+GET /api/app/releases/{version}/source
 ```
 
-The app accepts APK URLs only from the same HTTPS origin as its panel. If you use a custom domain, put that exact origin in each `apkUrl` and set the Gradle property `panelBaseUrl` to it when building the managed flavor. The APK endpoint is a same-origin R2-backed download; Cloudflare does not store or handle users' IPTV passwords.
+Published APKs are delivered from `/api/app/apks/{opaque-filename}`. Withdrawn releases are no longer returned by the public API or downloadable. R2 is delivery storage, so keep an independent backup of every release APK and the Android signing key.
 
 ## Local development
 
-Use Node.js and Wrangler: `npx wrangler pages dev site`. Pages Functions use the local R2 binding only after it has been added to the configuration; otherwise the download endpoint returns 503. The app API can be checked at `/api/app/config`, `/api/app/messages`, and `/api/app/releases/latest` after adding local `.dev.vars` values. Keep `.dev.vars` untracked and never commit secrets. For a quick static preview, serve `site/` with any local HTTP server.
+Run the Pages project locally with Wrangler. Local D1 and R2 state are disposable unless you explicitly configure remote resources:
 
-## Free-first design choices
+```sh
+npx wrangler pages dev site
+```
 
-- Pages serves the existing static site and compressible assets; browser caching is set in `site/_headers`.
-- Pages Functions serve only public JSON configuration/messages/release metadata. The app requires no database for these read-only values, so this avoids adding a paid dependency.
-- R2 serves the optional managed APK from the same origin, which meets the app's download-origin validation and avoids using Workers as an APK proxy.
-- No Analytics, Workers AI, Stream, Images, D1 or paid add-ons are enabled. They are unnecessary for the current app; app usage analytics would also conflict with its privacy promise.
+Use an untracked `.dev.vars` file for local bootstrap values. Never put credentials or signing material in GitHub or this repository.
+
+## Security and limits
+
+Pages Functions perform request validation, session authentication, CSRF and same-origin checks, optimistic revision checks for server configuration, release publication monotonicity, message limits, ZIP path checks, and bounded manifest parsing. The validator does not perform cryptographic Android certificate verification; the Android client must verify the signing certificate before installing an update.
+
+Pages request limits apply to browser uploads. The dashboard currently limits an APK upload to 100 MiB in the Pages Function and UI. Cloudflare plan limits and R2 charges can change, so review current Cloudflare limits and configure billing alerts before production use.

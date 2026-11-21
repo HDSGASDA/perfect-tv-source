@@ -2,7 +2,7 @@ name: Cloudflare Pages
 on:
   push:
     branches: [main]
-    paths: ["site/**", "functions/**", "wrangler.toml", ".github/workflows/cloudflare-pages.yml"]
+    paths: ["site/**", "functions/**", "migrations/**", "wrangler.toml", ".github/workflows/cloudflare-pages.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,6 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cloudflare/wrangler-action@v3
+        name: Apply D1 migrations
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 migrations apply imd-tv-panel --remote
+      - uses: cloudflare/wrangler-action@v3
+        name: Deploy Pages and Functions
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

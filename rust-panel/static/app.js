@@ -1,0 +1,232 @@
+'use strict';
+const $ = (selector, root = document) => root.querySelector(selector);
+const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+let csrf = null;
+let configuration = null;
+let activeTab = 'releases';
+function el(tag, text, className) {
+  const node = document.createElement(tag);
+  if (text !== undefined) node.textContent = text;
+  if (className) node.className = className;
+  return node;
+}
+function notice(message, error = false) {
+  const box = $('#notice'); box.textContent = message; box.classList.toggle('error', error); box.hidden = !message;
+}
+function loggedOut() {
+  csrf = null; $('#workspace').hidden = true; $('#login-view').hidden = false;
+  $('#logout').hidden = true; $('#username').textContent = '';
+}
+async function api(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  if (options.body && !(options.body instanceof FormData)) headers.set('Content-Type', 'application/json');
+  if (options.method && options.method !== 'GET' && csrf) headers.set('X-CSRF-Token', csrf);
+  const response = await fetch(path, { ...options, headers, credentials: 'same-origin' });
+  if (response.status === 204) return null;
+  const type = response.headers.get('content-type') || '';
+  const payload = type.includes('application/json') ? await response.json() : { error: await response.text() };
+  if (!response.ok) {
+    if (response.status === 401) loggedOut();
+    throw new Error(payload.error || `Request failed (${response.status})`);
+  }
+  return payload;
+}
+async function run(action, scope) {
+  const buttons = scope ? $$('button', scope) : [];
+  buttons.forEach(button => { button.disabled = true; });
+  try { await action(); } catch (error) { notice(error.message || 'The request could not be completed.', true); }
+  finally { buttons.forEach(button => { button.disabled = false; }); }
+}
+function tab(name) {
+  activeTab = name;
+  $$('.view').forEach(view => { view.hidden = view.id !== `${name}-view`; });
+  $$('.nav-button').forEach(button => {
+    const selected = button.dataset.tab === name;
+    button.classList.toggle('selected', selected);
+    if (selected) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current');
+  });
+  $('#breadcrumb').textContent = { releases: 'App releases', messages: 'Broadcast messages', servers: 'Provider servers' }[name];
+}
+async function startSession() {
+  const session = await api('/api/admin/session');
+  csrf = session.csrfToken; $('#username').textContent = session.username;
+  $('#workspace').hidden = false; $('#login-view').hidden = true; $('#logout').hidden = false;
+  tab(activeTab);
+  await Promise.all([loadReleases(), loadMessages(), loadConfig()]);
+}
+function date(seconds) { return new Date(seconds * 1000).toLocaleString(); }
+function localDate(seconds) {
+  if (!seconds) return '';
+  const value = new Date(seconds * 1000);
+  const adjusted = new Date(value.getTime() - value.getTimezoneOffset() * 60000);
+  return adjusted.toISOString().slice(0, 16);
+}
+function expiry(value) {
+  if (!value) return null;
+  const seconds = Math.floor(new Date(value).getTime() / 1000);
+  if (!Number.isFinite(seconds)) throw new Error('Enter a valid expiration date.');
+  return seconds;
+}
+function button(text, action, className = 'quiet') {
+  const node = el('button', text, `button ${className}`); node.type = 'button';
+  node.addEventListener('click', () => run(action, node.parentElement)); return node;
+}
+function empty(container, message) { container.replaceChildren(el('div', message, 'empty')); }
+async function loadReleases() {
+  const { releases } = await api('/api/admin/releases');
+  const published = releases.find(item => item.status === 'published');
+  $('#latest-version').textContent = published ? published.versionName : '—';
+  $('#latest-code').textContent = published ? `Version code ${published.versionCode}` : 'No published release';
+  $('#draft-count').textContent = String(releases.filter(item => item.status === 'draft').length);
+  const list = $('#release-list'); list.replaceChildren();
+  if (!releases.length) return empty(list, 'No releases yet. Upload your first signed APK above.');
+  for (const release of releases) {
+    const card = el('article', undefined, 'card release-item');
+    const header = el('div', undefined, 'item-header');
+    header.append(el('h3', release.versionName), el('span', release.status, `pill ${release.status}`));
+    card.append(header, el('p', `Version ${release.versionCode} · ${(release.sizeBytes / 1048576).toFixed(1)} MiB · Uploaded ${date(release.createdAt)}`, 'item-meta'));
+    if (release.notes) card.append(el('p', release.notes, 'item-body'));
+    const source = el('a', 'GPL corresponding source ↗', 'source-link');
+    source.href = release.sourceUrl; source.target = '_blank'; source.rel = 'noopener noreferrer';
+    card.append(source, el('div', `SHA-256: ${release.sha256}`, 'hash'));
+    const actions = el('div', undefined, 'item-actions');
+    if (release.status === 'draft') actions.append(button('Publish release', async () => {
+      if (!confirm(`Publish ${release.versionName} to all installations? Confirm that the APK is signed with the existing app key and the source URL matches this release.`)) return;
+      await api(`/api/admin/releases/${release.versionCode}/publish`, { method: 'POST' });
+      await loadReleases(); notice('Release published. Running apps check for updates hourly.');
+    }, 'primary'));
+    if (release.status !== 'withdrawn') actions.append(button('Withdraw', async () => {
+      if (!confirm('Withdraw this release? Its APK will no longer be downloadable. This cannot uninstall an app or undo an update already installed. Withdrawal is permanent.')) return;
+      await api(`/api/admin/releases/${release.versionCode}/withdraw`, { method: 'POST' });
+      await loadReleases(); notice('Release withdrawn. Existing installations are unchanged.');
+    }, 'danger'));
+    card.append(actions); list.append(card);
+  }
+}
+function uploadRelease(form) {
+  const data = new FormData(form);
+  const file = data.get('apk');
+  if (!(file instanceof File) || !file.size || file.size > 256 * 1024 * 1024) throw new Error('Choose a non-empty APK no larger than 256 MiB.');
+  const body = new FormData();
+  body.append('metadata', JSON.stringify({ versionCode: Number(data.get('versionCode')), versionName: data.get('versionName'), sourceUrl: data.get('sourceUrl'), notes: data.get('notes') }));
+  body.append('apk', file);
+  $('#upload-progress-wrap').hidden = false; $('#upload-progress').value = 0; $('#upload-status').textContent = 'Uploading APK…';
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest(); xhr.open('POST', '/api/admin/releases');
+    xhr.setRequestHeader('X-CSRF-Token', csrf); xhr.timeout = 610000;
+    xhr.upload.onprogress = event => {
+      if (event.lengthComputable) {
+        const percent = Math.round(event.loaded / event.total * 100);
+        $('#upload-progress').value = percent;
+        $('#upload-status').textContent = percent === 100 ? 'Upload complete. Validating APK…' : `Uploading ${percent}%`;
+      }
+    };
+    xhr.onload = () => {
+      let payload; try { payload = JSON.parse(xhr.responseText); } catch { payload = { error: 'The server returned an invalid response.' }; }
+      if (xhr.status >= 200 && xhr.status < 300) { $('#upload-status').textContent = 'Validated and saved as a draft.'; resolve(payload); }
+      else { if (xhr.status === 401) loggedOut(); $('#upload-status').textContent = 'Upload failed.'; reject(new Error(payload.error || `Upload failed (${xhr.status})`)); }
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload. Refresh release history before retrying.'));
+    xhr.ontimeout = () => reject(new Error('Upload timed out. Refresh release history before retrying.'));
+    xhr.send(body);
+  });
+}
+async function loadMessages() {
+  const { messages } = await api('/api/admin/messages');
+  const list = $('#message-list'); list.replaceChildren();
+  if (!messages.length) return empty(list, 'No broadcasts yet. Create a message to reach every installation.');
+  for (const message of messages) {
+    const expired = message.expiresAt && message.expiresAt <= Date.now() / 1000;
+    const state = !message.active ? 'Inactive' : expired ? 'Expired' : 'Active';
+    const card = el('article', undefined, 'card message-item');
+    const header = el('div', undefined, 'item-header');
+    header.append(el('h3', message.title), el('span', state, `pill ${state === 'Active' ? 'published' : 'neutral'}`));
+    card.append(header, el('p', `Created ${date(message.createdAt)} · ${message.expiresAt ? `Expires ${date(message.expiresAt)}` : 'No expiration'}`, 'item-meta'), el('p', message.body, 'item-body'));
+    const label = el('label', 'Expiration (local time, optional)');
+    const input = el('input'); input.type = 'datetime-local'; input.value = localDate(message.expiresAt); label.append(input); card.append(label);
+    const actions = el('div', undefined, 'item-actions');
+    actions.append(button(message.active && !expired ? 'Save expiration' : 'Activate message', async () => {
+      await api(`/api/admin/messages/${message.id}`, { method: 'PUT', body: JSON.stringify({ active: true, expiresAt: expiry(input.value) }) });
+      await loadMessages(); notice('Message updated.');
+    }));
+    if (message.active) actions.append(button('Deactivate', async () => {
+      await api(`/api/admin/messages/${message.id}`, { method: 'PUT', body: JSON.stringify({ active: false, expiresAt: message.expiresAt }) });
+      await loadMessages(); notice('Message deactivated.');
+    }, 'danger'));
+    card.append(actions); list.append(card);
+  }
+}
+async function loadConfig() { configuration = await api('/api/admin/config'); renderServers(); }
+function collectServers() {
+  const rows = $$('.server-row');
+  const servers = rows.map(row => ({ id: $('[name=id]', row).value, name: $('[name=name]', row).value, url: $('[name=url]', row).value }));
+  const selected = rows.findIndex(row => $('[name=defaultServer]', row).checked);
+  return { revision: configuration.revision, servers, defaultServerId: selected >= 0 ? servers[selected].id : '' };
+}
+function renderServers() {
+  $('#config-revision').textContent = `Revision ${configuration.revision}`;
+  const list = $('#server-list'); list.replaceChildren();
+  configuration.servers.forEach((server, index) => {
+    const row = el('div', undefined, 'server-row');
+    const grid = el('div', undefined, 'form-grid');
+    for (const [name, title, maxLength] of [['id', 'Stable ID', 64], ['name', 'Display name', 80], ['url', 'HTTPS origin', 2048]]) {
+      const label = el('label', title); const input = el('input');
+      input.name = name; input.value = server[name]; input.required = true; input.maxLength = maxLength;
+      if (name === 'url') { input.type = 'url'; input.placeholder = 'https://provider.example:443'; }
+      if (name === 'id') input.pattern = '[a-zA-Z0-9_-]{1,64}';
+      label.append(input); if (name === 'url') row.append(label); else grid.append(label);
+    }
+    row.prepend(grid);
+    const actions = el('div', undefined, 'server-actions');
+    const label = el('label', undefined, 'radio-label'); const radio = el('input');
+    radio.type = 'radio'; radio.name = 'defaultServer'; radio.value = String(index); radio.required = true; radio.checked = server.id === configuration.defaultServerId;
+    label.append(radio, document.createTextNode('Default server')); actions.append(label);
+    const remove = button('Remove', async () => {
+      if (configuration.servers.length <= 1) throw new Error('At least one provider server is required.');
+      configuration = collectServers();
+      const removed = configuration.servers.splice(index, 1)[0];
+      if (removed.id === configuration.defaultServerId) configuration.defaultServerId = configuration.servers[0].id;
+      renderServers();
+    }, 'danger'); actions.append(remove); row.append(actions); list.append(row);
+  });
+  $('#add-server').disabled = configuration.servers.length >= 10;
+}
+$$('.nav-button').forEach(node => node.addEventListener('click', () => tab(node.dataset.tab)));
+$('#login-form').addEventListener('submit', event => {
+  event.preventDefault(); const form = event.currentTarget;
+  run(async () => {
+    const data = new FormData(form);
+    const session = await api('/api/admin/login', { method: 'POST', body: JSON.stringify({ username: data.get('username'), password: data.get('password') }) });
+    csrf = session.csrfToken; form.reset(); notice(''); await startSession();
+  }, form);
+});
+$('#logout').addEventListener('click', () => run(async () => { await api('/api/admin/logout', { method: 'POST' }); loggedOut(); notice('Signed out.'); }));
+$('#release-form').addEventListener('submit', event => {
+  event.preventDefault(); const form = event.currentTarget;
+  run(async () => { const result = await uploadRelease(form); $('[name=apk]', form).value = ''; await loadReleases(); notice(`Version ${result.versionCode} saved as a draft. Review and publish it when ready.`); }, form);
+});
+$('#message-form').addEventListener('submit', event => {
+  event.preventDefault(); const form = event.currentTarget;
+  run(async () => {
+    const data = new FormData(form);
+    await api('/api/admin/messages', { method: 'POST', body: JSON.stringify({ title: data.get('title'), body: data.get('body'), expiresAt: expiry(data.get('expiresAt')) }) });
+    form.reset(); await loadMessages(); notice('Broadcast published. Foreground apps poll for messages every 60 seconds.');
+  }, form);
+});
+$('#servers-form').addEventListener('submit', event => {
+  event.preventDefault(); const form = event.currentTarget;
+  run(async () => {
+    const next = collectServers();
+    if (!confirm('Save this trusted server list? These origins receive customer provider credentials. Customers must select a server manually and re-enter their login.')) return;
+    configuration = await api('/api/admin/config', { method: 'PUT', body: JSON.stringify(next) });
+    renderServers(); notice(`Server configuration saved as revision ${configuration.revision}.`);
+  }, form);
+});
+$('#add-server').addEventListener('click', () => run(async () => {
+  configuration = collectServers(); if (configuration.servers.length >= 10) throw new Error('At most 10 servers are allowed.');
+  configuration.servers.push({ id: '', name: '', url: '' }); renderServers();
+}));
+$('#refresh-releases').addEventListener('click', () => run(loadReleases));
+$('#refresh-messages').addEventListener('click', () => run(loadMessages));
+$('#reload-config').addEventListener('click', () => run(async () => { if (confirm('Reload the saved server list and discard unsaved edits?')) await loadConfig(); }));
+startSession().catch(error => { if (csrf) notice(error.message, true); else loggedOut(); });
