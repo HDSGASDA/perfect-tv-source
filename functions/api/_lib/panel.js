@@ -1,7 +1,7 @@
 const json = (data, status = 200, headers = {}) => new Response(JSON.stringify(data), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "x-content-type-options": "nosniff", ...headers } });
 const fail = (message, status = 400) => json({ error: message }, status);
 const now = () => Math.floor(Date.now() / 1000);
-const enc = new TextEncoder();
+const MAX_APK_STORAGE_BYTES = 9 * 1024 * 1024 * 1024; // Keep 1 GiB below R2's 10 GB-month free allowance.const enc = new TextEncoder();
 const bytesToHex = b => [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, "0")).join("");
 const hexToBytes = h => Uint8Array.from(h.match(/../g) || [], x => parseInt(x, 16));
 const random = (n = 32) => { const b = new Uint8Array(n); crypto.getRandomValues(b); return bytesToHex(b); };
@@ -190,6 +190,8 @@ async function upload(request, env) {
   if(typeof metadataRaw!=="string"||!(file instanceof File))return fail("Send metadata first and an APK file"); if(file.size<1||file.size>100*1024*1024)return fail("APK must be between 1 byte and 100 MiB on Pages");
   let input;try{input=JSON.parse(metadataRaw)}catch{return fail("Invalid release metadata JSON");}validateRelease(input);
   const max=await env.DB.prepare("SELECT COALESCE(MAX(version_code),0) n FROM releases").first();if(input.versionCode<=max.n)return fail(`Version code must be greater than ${max.n}; used version codes cannot be reused`,409);
+  const existing=await env.DB.prepare("SELECT COALESCE(SUM(size_bytes),0) bytes FROM releases").first();
+  if(existing.bytes+file.size>MAX_APK_STORAGE_BYTES)return fail("R2 storage budget guard reached; remove old releases and retry",413);
   const bytes=new Uint8Array(await file.arrayBuffer()); const packageName=inspectApk(bytes,input); const sha256=bytesToHex(await crypto.subtle.digest("SHA-256",bytes));
   // Pages Workers do not provide native Android APK/AXML parsing. Metadata is recorded as entered;
   // clients still verify hash, package, version and signing certificate before installing.
