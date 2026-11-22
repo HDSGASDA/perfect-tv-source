@@ -35,8 +35,8 @@ android {
         create("managed") {
             dimension = "distribution"
             applicationIdSuffix = ".managed"
-            versionCode = providers.gradleProperty("managedVersionCode").orElse("19").get().toInt().also { require(it > 0) }
-            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.2-managed.7").get()
+            versionCode = providers.gradleProperty("managedVersionCode").orElse("20").get().toInt().also { require(it > 0) }
+            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.2-managed.8").get()
             buildConfigField("boolean", "MANAGED", "true")
             buildConfigField("String", "PANEL_BASE_URL", "\"$panelUrl\"")
         }
