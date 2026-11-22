@@ -21,6 +21,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
+import org.imdtv.iptvtv.BuildConfig
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
@@ -40,10 +41,15 @@ class UpdaterTest {
         PreferenceDataStoreFactory.create(scope = scope) { tmp.newFile("update.preferences_pb") },
         checkEveryMs = 0,
         releasesUrl = server.url("/releases").toString().trimEnd('/'),
+        panelBaseUrl = server.url("/").toString().trimEnd('/'),
     )
 
-    private fun release(tag: String) = MockResponse().setBody(
-        """{"tag_name":"$tag","assets":[{"name":"imd-tv.apk","browser_download_url":"https://example.com/imd-tv.apk"}]}""",
+    /** The published-release body of the flavor under test: the panel's JSON for managed, GitHub's for standard. */
+    private fun release(tag: String, code: Long = tag.trimStart('v', 'V').substringBefore('.').toLongOrNull() ?: 1L) = MockResponse().setBody(
+        if (BuildConfig.MANAGED)
+            """{"versionCode":$code,"versionName":"${tag.trimStart('v', 'V')}","apkUrl":"${server.url("/app.apk")}","sha256":"${"0".repeat(64)}","notes":""}"""
+        else
+            """{"tag_name":"$tag","assets":[{"name":"imd-tv.apk","browser_download_url":"https://example.com/imd-tv.apk"}]}""",
     )
 
     @Test fun versions() {
@@ -94,8 +100,9 @@ class UpdaterTest {
         server.enqueue(release("v99.0.0"))
         updater.check()
         server.enqueue(MockResponse().setResponseCode(404))
-        assertFalse(updater.check())
-        server.enqueue(MockResponse().setBody("""{"tag_name":"v0.0.1","assets":[]}"""))
+        // The panel answers 404 with "no release" (a successful check); GitHub's 404 is a failed request.
+        if (BuildConfig.MANAGED) assertTrue(updater.check()) else assertFalse(updater.check())
+        server.enqueue(release("v0.0.1", code = 1))
         assertTrue(updater.check())
         assertNull(updater.available.value)
         assertFalse(updater.prompt.value)

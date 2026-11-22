@@ -53,8 +53,8 @@ fun isNewer(tag: String, current: String): Boolean {
  * One-click updates from GitHub Releases: the latest release's imd-tv.apk goes to Android's installer, which asks
  * the user to confirm (and, the first time, to allow installs from Perfect TV). Releases must keep the same signing key.
  */
-class Updater(private val context: Context, private val http: OkHttpClient, private val json: Json, private val prefs: DataStore<Preferences>, private val checkEveryMs: Long = CHECK_EVERY_MS, private val releasesUrl: String = RELEASES) {
-    private val panel by lazy { org.imdtv.iptvtv.data.management.PanelClient(http) }
+class Updater(private val context: Context, private val http: OkHttpClient, private val json: Json, private val prefs: DataStore<Preferences>, private val checkEveryMs: Long = CHECK_EVERY_MS, private val releasesUrl: String = RELEASES, panelBaseUrl: String = BuildConfig.PANEL_BASE_URL) {
+    private val panel by lazy { org.imdtv.iptvtv.data.management.PanelClient(http, panelBaseUrl) }
     val available = MutableStateFlow<Update?>(null)
     /** The update prompt is open. Opens by itself once per version; About › Version opens it any time. */
     val prompt = MutableStateFlow(false)

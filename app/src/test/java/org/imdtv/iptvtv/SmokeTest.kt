@@ -6,6 +6,6 @@ import org.junit.Test
 class SmokeTest {
     @Test
     fun applicationIdIsCorrect() {
-        assertEquals("org.imdtv.iptvtv", BuildConfig.APPLICATION_ID)
+        assertEquals(if (BuildConfig.MANAGED) "org.imdtv.iptvtv.managed" else "org.imdtv.iptvtv", BuildConfig.APPLICATION_ID)
     }
 }
