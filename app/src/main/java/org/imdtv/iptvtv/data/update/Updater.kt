@@ -32,7 +32,6 @@ import java.io.IOException
 private const val RELEASES = "https://api.github.com/repos/HDSGASDA/app-perfect-tv/releases"
 private const val APK_NAME = "imd-tv.apk"
 private const val CHECK_EVERY_MS = 10_000L
-private const val LATER_MS = 24 * 60 * 60 * 1000L
 
 @Serializable private data class GhAsset(val name: String, @SerialName("browser_download_url") val url: String)
 @Serializable private data class GhRelease(@SerialName("tag_name") val tag: String, val body: String? = null, val assets: List<GhAsset> = emptyList())
@@ -54,7 +53,7 @@ fun isNewer(tag: String, current: String): Boolean {
  * One-click updates from GitHub Releases: the latest release's imd-tv.apk goes to Android's installer, which asks
  * the user to confirm (and, the first time, to allow installs from Perfect TV). Releases must keep the same signing key.
  */
-class Updater(private val context: Context, private val http: OkHttpClient, private val json: Json, private val prefs: DataStore<Preferences>) {
+class Updater(private val context: Context, private val http: OkHttpClient, private val json: Json, private val prefs: DataStore<Preferences>, private val checkEveryMs: Long = CHECK_EVERY_MS, private val releasesUrl: String = RELEASES) {
     private val panel by lazy { org.imdtv.iptvtv.data.management.PanelClient(http) }
     val available = MutableStateFlow<Update?>(null)
     /** The update prompt is open. Opens by itself once per version; About › Version opens it any time. */
@@ -62,16 +61,17 @@ class Updater(private val context: Context, private val http: OkHttpClient, priv
     /** "Downloading… 40%", "Installing…", or null when idle. */
     val progress = MutableStateFlow<String?>(null)
     val error = MutableStateFlow<String?>(null)
-    private val laterUntil = longPreferencesKey("update_later_until")
-    private val laterVersion = stringPreferencesKey("update_later_version")
     private val lastCheckAt = longPreferencesKey("update_last_check_at")
     private val notesSeen = stringPreferencesKey("notes_seen")
     private val checkLock = kotlinx.coroutines.sync.Mutex()
+    // Dismissal only quiets this running app session. A later launch checks again and
+    // automatically shows any still-published update, even if an earlier test tapped Later.
+    @Volatile private var dismissedUpdateId: String? = null
     /** This version's release notes, shown once after an update; null when closed. */
     val whatsNew = MutableStateFlow<String?>(null)
 
     private fun release(path: String): GhRelease =
-        http.newCall(Request.Builder().url("$RELEASES/$path").header("Accept", "application/vnd.github+json").build()).execute().use { r ->
+        http.newCall(Request.Builder().url("$releasesUrl/$path").header("Accept", "application/vnd.github+json").build()).execute().use { r ->
             if (!r.isSuccessful) throw IOException("HTTP ${r.code}")
             json.decodeFromString<GhRelease>(r.body!!.string())
         }
@@ -102,7 +102,7 @@ class Updater(private val context: Context, private val http: OkHttpClient, priv
         withContext(Dispatchers.IO) {
             val now = System.currentTimeMillis()
             val last = prefs.data.first()[lastCheckAt] ?: 0L
-            if (!manual && now - last < CHECK_EVERY_MS) return@withContext true
+            if (!manual && now - last < checkEveryMs) return@withContext true
             val u = try {
                 if (BuildConfig.MANAGED) {
                     panel.release()?.takeIf { it.versionCode > BuildConfig.VERSION_CODE }?.let {
@@ -121,26 +121,19 @@ class Updater(private val context: Context, private val http: OkHttpClient, priv
             prefs.edit { it[lastCheckAt] = now }
             available.value = u
             if (u == null) prompt.value = false
-            val state = prefs.data.first()
             val updateId = u?.let { it.versionCode?.toString() ?: it.version }
-            val laterId = state[laterVersion]
-            val laterExpired = System.currentTimeMillis() >= (state[laterUntil] ?: 0L)
-            // A dismissal applies only to the release that was on screen. A newly published
-            // release must open the prompt immediately, even if the previous release was deferred.
-            if (u != null && (manual || updateId != laterId || laterExpired)) prompt.value = true
+            // Automatic polling must be able to surface the release after it is published.
+            // A dismissal is session-local; it must not become a 24-hour suppression window.
+            if (u != null && (manual || updateId != dismissedUpdateId)) prompt.value = true
             true
         }
     }
 
-    /** "Later" (or Back): the current release stays closed for a day. A newly published release is never hidden by an older dismissal. */
+    /** "Later" (or Back) closes the prompt for this app session. A newly published version
+     * still opens automatically, and any still-published update is checked again next launch. */
     suspend fun later() {
         prompt.value = false
-        available.value?.let { update ->
-            prefs.edit {
-                it[laterVersion] = update.versionCode?.toString() ?: update.version
-                it[laterUntil] = System.currentTimeMillis() + LATER_MS
-            }
-        }
+        dismissedUpdateId = available.value?.let { it.versionCode?.toString() ?: it.version }
     }
 
     private val installLock = kotlinx.coroutines.sync.Mutex()

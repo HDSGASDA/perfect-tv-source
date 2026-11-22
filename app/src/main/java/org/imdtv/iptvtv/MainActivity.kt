@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        org.imdtv.iptvtv.work.UpdateCheckWorker.schedule(this)
         CatalogueSyncWorker.runOnLaunch(this)
         lifecycleScope.launch { (application as IptvApp).container.updater.checkWhatsNew() }
         // Keep checking while the app remains visible. Automatic requests are spaced ten seconds apart,

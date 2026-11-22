@@ -1,13 +1,51 @@
-package org.imdtv.iptvtv.data
+package org.imdtv.iptvtv.data.update
 
-import org.imdtv.iptvtv.data.update.isNewer
-import org.imdtv.iptvtv.data.update.plainNotes
+import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
 
+@RunWith(RobolectricTestRunner::class)
 class UpdaterTest {
+    @get:Rule val tmp = TemporaryFolder()
+    private val server = MockWebServer()
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+
+    @After fun tearDown() {
+        server.shutdown()
+        scope.cancel()
+    }
+
+    private fun updater() = Updater(
+        context, OkHttpClient(), Json { ignoreUnknownKeys = true },
+        PreferenceDataStoreFactory.create(scope = scope) { tmp.newFile("update.preferences_pb") },
+        checkEveryMs = 0,
+        releasesUrl = server.url("/releases").toString().trimEnd('/'),
+    )
+
+    private fun release(tag: String) = MockResponse().setBody(
+        """{"tag_name":"$tag","assets":[{"name":"imd-tv.apk","browser_download_url":"https://example.com/imd-tv.apk"}]}""",
+    )
+
     @Test fun versions() {
         assertTrue(isNewer("v0.2.0", "0.1.0"))
         assertTrue(isNewer("v0.10.0", "0.9.5"))
@@ -20,6 +58,47 @@ class UpdaterTest {
 
     @Test fun notes() {
         assertEquals("What's new\nBulk hide channels\nSee the site", plainNotes("## What's new\n**Bulk hide** channels\nSee [the site](https://x)"))
+    }
+
+    @Test fun automaticCheckOpensThePrompt() = runTest {
+        val updater = updater()
+        server.enqueue(release("v99.0.0"))
+        assertTrue(updater.check())
+        assertEquals("99.0.0", updater.available.value?.version)
+        assertTrue(updater.prompt.value)
+    }
+
+    @Test fun laterDoesNotReopenTheSameReleaseOnTheNextPoll() = runTest {
+        val updater = updater()
+        server.enqueue(release("v99.0.0"))
+        updater.check()
+        updater.later()
+        server.enqueue(release("v99.0.0"))
+        updater.check()
+        assertFalse(updater.prompt.value)
+    }
+
+    @Test fun aNewReleaseOpensThePromptAfterLater() = runTest {
+        val updater = updater()
+        server.enqueue(release("v99.0.0"))
+        updater.check()
+        updater.later()
+        server.enqueue(release("v100.0.0"))
+        updater.check()
+        assertEquals("100.0.0", updater.available.value?.version)
+        assertTrue(updater.prompt.value)
+    }
+
+    @Test fun aMissingReleaseClearsThePrompt() = runTest {
+        val updater = updater()
+        server.enqueue(release("v99.0.0"))
+        updater.check()
+        server.enqueue(MockResponse().setResponseCode(404))
+        assertFalse(updater.check())
+        server.enqueue(MockResponse().setBody("""{"tag_name":"v0.0.1","assets":[]}"""))
+        assertTrue(updater.check())
+        assertNull(updater.available.value)
+        assertFalse(updater.prompt.value)
     }
 
     @Test fun fullNotesAreNotCut() {
