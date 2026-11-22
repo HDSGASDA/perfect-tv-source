@@ -28,6 +28,31 @@ enum class ThemeColour(val label: String, @StringRes val labelRes: Int, val glas
 
 enum class AudioDecoder { HARDWARE, SOFTWARE }
 
+/** Playback › Connection profile: how much stream the player buffers ahead (LoadControl + live offset). */
+enum class ConnectionProfile(val label: String, @StringRes val labelRes: Int) {
+    STABLE("Stable line", R.string.set_b_profile_stable), LOW_LATENCY("Low latency", R.string.set_b_profile_low_latency)
+}
+
+/** Playback › Subtitles › Appearance: text size as a fraction of the video height (Media3's default is 0.0533). */
+enum class SubtitleSize(val label: String, @StringRes val labelRes: Int, val fraction: Float) {
+    SMALL("Small", R.string.set_a_size_small, .04f), DEFAULT("Default", R.string.set_b_sub_size_default, .0533f),
+    LARGE("Large", R.string.set_a_size_large, .07f), EXTRA_LARGE("Extra large", R.string.set_b_sub_size_xl, .09f)
+}
+
+/** How high above the bottom edge subtitles sit (fraction of the video height). */
+enum class SubtitlePosition(val label: String, @StringRes val labelRes: Int, val fraction: Float) {
+    LOW("Low", R.string.set_b_sub_pos_low, .04f), DEFAULT("Default", R.string.set_b_sub_pos_default, .08f), HIGH("High", R.string.set_b_sub_pos_high, .16f)
+}
+
+/** The box behind subtitle text. */
+enum class SubtitleBackground(val label: String, @StringRes val labelRes: Int, val color: Int) {
+    NONE("None", R.string.set_b_sub_bg_none, 0x00000000), TRANSLUCENT("Translucent", R.string.set_b_sub_bg_translucent, 0x80000000.toInt()),
+    BLACK("Black", R.string.set_b_sub_bg_black, 0xFF000000.toInt())
+}
+
+/** Sleep timer choices in minutes; 0 = off (the default). */
+val SLEEP_TIMER_MINUTES = listOf(0, 15, 30, 60, 90, 120)
+
 /** Where a channel logo can come from; the setting is an order of these (first available wins). */
 enum class LogoKind(val label: String, @StringRes val labelRes: Int) {
     PLAYLIST("Playlist", R.string.set_a_logo_playlist), OPEN_SOURCE("Open-source logos", R.string.set_a_logo_open_source), PACK("My logo pack", R.string.set_a_logo_pack)
@@ -157,6 +182,28 @@ data class AppSettings(
     val themeLooks: Map<String, String> = emptyMap(),
     /** Open-source guide files (URLs) turned off in EPG sources: kept in the list, never imported or matched. */
     val guidesOff: Set<String> = emptySet(),
+    /** Sleep timer: playback stops after this many minutes; 0 = off (default). */
+    val sleepTimerMin: Int = 0,
+    /** Preferred audio language (ISO 639-1); null = the stream's own default track. */
+    val audioLanguage: String? = null,
+    /** Series: the next episode starts by itself after a 10-second countdown. */
+    val autoplayNext: Boolean = true,
+    val subtitleSize: SubtitleSize = SubtitleSize.DEFAULT,
+    val subtitlePosition: SubtitlePosition = SubtitlePosition.DEFAULT,
+    val subtitleBackground: SubtitleBackground = SubtitleBackground.TRANSLUCENT,
+    /** Parental controls: 4-digit PIN, stored encrypted (Secrets); empty = no lock. Never backed up. */
+    val parentalPin: String = "",
+    /** Category row ids locked by the PIN (live, movies and series). */
+    val lockedCategories: Set<Long> = emptySet(),
+    /** Settings asks for the PIN too. */
+    val lockSettings: Boolean = false,
+    val connectionProfile: ConnectionProfile = ConnectionProfile.STABLE,
+    /** Live pause / instant replay: a rolling buffer of the live channel while watching full screen. */
+    val instantReplayOn: Boolean = true,
+    /** Switch the TV's display mode to the stream's frame rate (device-dependent; off by default). */
+    val matchRefreshRate: Boolean = false,
+    /** Opt-in: anonymous playback totals (stalls, underruns, dropped frames) to the management panel. */
+    val diagnosticsOn: Boolean = false,
 ) {
     /** The per-theme appearance: colour, mode, guide rows, header size, preview fade. */
     fun look() = listOf(themeColour.name, themeDark, guideRows, headerSize.name, previewFade).joinToString(";")
@@ -198,6 +245,8 @@ data class AppSettings(
         startEarlyMin = startEarlyMin.takeIf { it in START_EARLY } ?: 2,
         endLateMin = endLateMin.takeIf { it in END_LATE } ?: 5,
         guideRows = guideRows.coerceIn(GUIDE_ROWS.first(), 15),
+        sleepTimerMin = sleepTimerMin.takeIf { it in SLEEP_TIMER_MINUTES } ?: 0,
+        parentalPin = parentalPin.takeIf { it.isEmpty() || it.matches(Regex("\\d{4}")) } ?: "",
     )
 }
 

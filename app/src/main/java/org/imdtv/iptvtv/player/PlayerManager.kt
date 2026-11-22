@@ -53,11 +53,16 @@ class PlayerManager(private val context: Context) {
         private set
     private var wantedDecoder = audioDecoder
 
-    /** Rebuilt when the audio decoder changes: read it at use time, don't keep a reference. */
-    var player: ExoPlayer = build(audioDecoder)
+    /** Playback › Connection profile; like the decoder, a change rebuilds the player when idle. */
+    var connectionProfile: org.imdtv.iptvtv.data.settings.ConnectionProfile = org.imdtv.iptvtv.data.settings.ConnectionProfile.STABLE
+        private set
+    private var wantedProfile = connectionProfile
+
+    /** Rebuilt when the audio decoder or connection profile changes: read it at use time, don't keep a reference. */
+    var player: ExoPlayer = build(audioDecoder, connectionProfile)
         private set
 
-    private fun build(d: AudioDecoder): ExoPlayer = ExoPlayer.Builder(
+    private fun build(d: AudioDecoder, profile: org.imdtv.iptvtv.data.settings.ConnectionProfile): ExoPlayer = ExoPlayer.Builder(
         context,
         // SOFTWARE (PREFER): the FFmpeg audio renderer handles AC3/E-AC3/DTS that many TV boxes can't decode.
         // HARDWARE (ON): the platform decoders or passthrough to the TV/receiver first; FFmpeg only for audio the box can't
@@ -74,7 +79,7 @@ class PlayerManager(private val context: Context) {
             if (d == AudioDecoder.SOFTWARE) DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
             else DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON,
         ),
-    ).build()
+    ).setLoadControl(loadControl(profile)).build()
 
     fun setAudioDecoder(d: AudioDecoder) {
         wantedDecoder = d
@@ -84,16 +89,25 @@ class PlayerManager(private val context: Context) {
         if (u != null) { this.url = null; reload(u, userAgent, login, vod, drm, null) } else applyDecoder()
     }
 
-    /** Swaps in a player built for [wantedDecoder], keeping the listener and the attached view. */
+    fun setConnectionProfile(p: org.imdtv.iptvtv.data.settings.ConnectionProfile) {
+        wantedProfile = p
+        if (player.playbackState != Player.STATE_IDLE || p == connectionProfile) return
+        val u = url
+        if (u != null) { this.url = null; reload(u, userAgent, login, vod, drm, null) } else applyDecoder()
+    }
+
+    /** Swaps in a player built for [wantedDecoder]/[wantedProfile], keeping the listener and the attached view. */
     private fun applyDecoder() {
-        if (wantedDecoder == audioDecoder) return
+        if (wantedDecoder == audioDecoder && wantedProfile == connectionProfile) return
         val old = player
         old.removeListener(listener)
-        player = build(wantedDecoder).also { it.addListener(listener); it.addAnalyticsListener(diagnostics); applySubtitles(it) }
+        old.removeAnalyticsListener(diagnostics)
+        player = build(wantedDecoder, wantedProfile).also { it.addListener(listener); it.addAnalyticsListener(diagnostics); applySubtitles(it); applyAudioLanguage(it) }
         audioDecoder = wantedDecoder
+        connectionProfile = wantedProfile
         view?.let { PlayerView.switchTargetView(player, null, it) }
         old.release()
-        Log.i(TAG, "audio decoder $audioDecoder")
+        Log.i(TAG, "audio decoder $audioDecoder, profile $connectionProfile")
     }
 
     private var subtitlesOn = false
@@ -114,11 +128,158 @@ class PlayerManager(private val context: Context) {
             else if (liveSubtitlesOn) liveSubtitleParams(p.trackSelectionParameters, subtitleLanguage)
             else liveOffParams(p.trackSelectionParameters)
     }
+
+    // --- Subtitle appearance (Playback › Subtitles › size, position, background) ---
+
+    private var subtitleStyle = androidx.media3.ui.CaptionStyleCompat.DEFAULT
+    private var subtitleSizeFraction = .0533f
+    private var subtitleBottomFraction = .08f
+
+    /** Applies now (to the attached view) and to every view attached after. */
+    fun setSubtitleAppearance(sizeFraction: Float, bottomFraction: Float, backgroundColor: Int) {
+        subtitleSizeFraction = sizeFraction
+        subtitleBottomFraction = bottomFraction
+        subtitleStyle = androidx.media3.ui.CaptionStyleCompat(
+            android.graphics.Color.WHITE, backgroundColor, android.graphics.Color.TRANSPARENT,
+            android.graphics.Color.WHITE, androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE, android.graphics.Typeface.DEFAULT)
+        applySubtitleStyle()
+    }
+
+    private fun applySubtitleStyle() {
+        view?.subtitleView?.apply {
+            setStyle(subtitleStyle)
+            setFractionalTextSize(subtitleSizeFraction, false)
+            setBottomPaddingFraction(subtitleBottomFraction)
+        }
+    }
+
+    // --- Audio language preference and the audio-track picker ---
+
+    private var audioLanguage: String? = null
+
+    /** Playback › Audio language; null = the stream's own default. Applies now and to every stream played after. */
+    fun setAudioLanguage(language: String?) {
+        audioLanguage = language
+        applyAudioLanguage(player)
+    }
+
+    private fun applyAudioLanguage(p: ExoPlayer) {
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().setPreferredAudioLanguage(audioLanguage).build()
+    }
+
+    /** The audio tracks of the stream playing now, for the overlay's Audio track menu. */
+    fun audioTracks(): List<AudioTrackOption> = player.currentTracks.groups.mapIndexedNotNull { gi, g ->
+        if (g.type != C.TRACK_TYPE_AUDIO) null else (0 until g.length).map { ti ->
+            val f = g.getTrackFormat(ti)
+            AudioTrackOption(gi, ti, f.language, f.label, f.channelCount.takeIf { it != Format.NO_VALUE },
+                f.codecs ?: f.sampleMimeType, g.isTrackSelected(ti))
+        }
+    }.flatten()
+
+    /** Picks one track (the Audio track menu); stays until the next stream or [autoAudioTrack]. */
+    fun selectAudioTrack(option: AudioTrackOption) {
+        val g = player.currentTracks.groups.getOrNull(option.groupIndex) ?: return
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setOverrideForType(androidx.media3.common.TrackSelectionOverride(g.mediaTrackGroup, option.trackIndex)).build()
+    }
+
+    /** Back to automatic: the Audio language setting (or the stream's default) picks again. */
+    fun autoAudioTrack() {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .clearOverridesOfType(C.TRACK_TYPE_AUDIO).build()
+        applyAudioLanguage(player)
+    }
+
+    // --- Sleep timer (Playback › Sleep timer; off by default) ---
+
+    /** The setting: armed when a stream starts and no timer is running yet. */
+    var defaultSleepMin: Int = 0
+
+    private val _sleepEndsAt = MutableStateFlow<Long?>(null)
+    /** When the running sleep timer fires (elapsedRealtime ms); null = no timer. */
+    val sleepEndsAt: StateFlow<Long?> = _sleepEndsAt
+
+    private val _sleepExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** The timer fired: playback was stopped; the full-screen player leaves the screen. */
+    val sleepExpired: SharedFlow<Unit> = _sleepExpired
+
+    private val sleepRun = Runnable {
+        _sleepEndsAt.value = null
+        Log.i(TAG, "sleep timer expired")
+        stop()
+        _sleepExpired.tryEmit(Unit)
+    }
+
+    /** Minutes from now; 0 cancels. Survives zapping (one timer per viewing session). */
+    fun setSleepTimer(minutes: Int) {
+        handler.removeCallbacks(sleepRun)
+        if (minutes <= 0) { _sleepEndsAt.value = null; return }
+        val ms = minutes * 60_000L
+        _sleepEndsAt.value = android.os.SystemClock.elapsedRealtime() + ms
+        handler.postDelayed(sleepRun, ms)
+    }
+
+    // --- Live pause / instant replay (Playback › Live pause & instant replay) ---
+
+    /** The setting; off clears the buffer and leaves replay if it is showing. */
+    var instantReplayOn: Boolean = true
+        set(v) { field = v; if (!v) leaveReplay(clearBuffer = true) }
+
+    private val replayBuffer = ReplayBuffer(java.io.File(context.cacheDir, "replay"))
+    private val _replaying = MutableStateFlow(false)
+    /** The rolling buffer is on screen instead of the live stream (movie controls: pause and seek). */
+    val replaying: StateFlow<Boolean> = _replaying
+    private val _replayReady = MutableStateFlow(false)
+    /** Enough of the channel is buffered to pause live (a few seconds at least). */
+    val replayReady: StateFlow<Boolean> = _replayReady
+    private var replaySeeked = false
+
+    /** Pause live: play the rolling buffer from its newest point. False when nothing is buffered yet. */
+    fun startReplay(): Boolean {
+        if (_replaying.value || vod || url == null || !replayBuffer.ready()) return false
+        val files = replayBuffer.sources()
+        if (files.isEmpty()) return false
+        replayBuffer.freeze() // the files must not change under the player
+        handler.removeCallbacks(watchdog)
+        handler.removeCallbacks(retry)
+        resolving?.cancel()
+        retries = 0
+        _replaying.value = true
+        _replayReady.value = false
+        replaySeeked = false
+        vod = true // seekable: no live watchdog, no reconnect path
+        val progressive = androidx.media3.exoplayer.source.ProgressiveMediaSource.Factory(DefaultDataSource.Factory(context))
+        player.setMediaSources(files.map { progressive.createMediaSource(MediaItem.fromUri(android.net.Uri.fromFile(it))) })
+        player.playWhenReady = true
+        player.prepare()
+        Log.i(TAG, "instant replay: ${files.size} files, ${replayBuffer.totalBytes() / (1024 * 1024)} MB")
+        return true
+    }
+
+    /** Leave the buffer and rejoin the live stream at its edge. */
+    fun backToLive() {
+        if (!_replaying.value) return
+        val u = url ?: return leaveReplay(clearBuffer = true)
+        leaveReplay(clearBuffer = false)
+        this.url = null // force play() to load again (it skips a URL already "playing")
+        player.stop(); player.clearMediaItems()
+        play(u, userAgent, login, false, drm, guarded = false)
+    }
+
+    private fun leaveReplay(clearBuffer: Boolean) {
+        _replaying.value = false
+        replaySeeked = false
+        if (clearBuffer) replayBuffer.clear() else replayBuffer.thaw()
+    }
     /** The stream loaded now is a movie/episode (else live). */
     private var vod = false
 
     private val _errors = MutableSharedFlow<PlaybackException>(extraBufferCapacity = 1)
     val errors: SharedFlow<PlaybackException> = _errors
+
+    private val _ended = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** A movie/episode played to its end (not live, not the replay buffer): the next-episode countdown starts here. */
+    val ended: SharedFlow<Unit> = _ended
 
     private val handler = Handler(Looper.getMainLooper())
     private var url: String? = null
@@ -164,6 +325,13 @@ class PlayerManager(private val context: Context) {
             override fun onPlaybackStateChanged(state: Int) {
                 Log.i(TAG, "state ${arrayOf("?", "IDLE", "BUFFERING", "READY", "ENDED")[state]} ${tail(url)}")
                 if (state == Player.STATE_READY) retries = 0
+                if (state == Player.STATE_ENDED && vod && !_replaying.value) _ended.tryEmit(Unit)
+                // Instant replay opens at the newest buffered point, not minutes back at the buffer's start.
+                if (state == Player.STATE_READY && _replaying.value && !replaySeeked) {
+                    replaySeeked = true
+                    val d = player.duration
+                    if (d != C.TIME_UNSET && d > 5_000) player.seekTo(d - 2_000)
+                }
                 _buffering.value = state == Player.STATE_BUFFERING
             }
 
@@ -188,9 +356,15 @@ class PlayerManager(private val context: Context) {
     @androidx.annotation.VisibleForTesting
     internal fun streamError(error: PlaybackException) {
         Log.w(TAG, "error ${error.errorCodeName} ${tail(url)} (retry ${retries + 1}/$MAX_RETRIES)", error)
+        stat { it.errors++ }
         fallback?.let { f -> fallback = null; Log.i(TAG, "trying the other link form"); return play(f, userAgent, login, vod, drm, guarded = false) }
+        // A backup stream (or another merged source) jumps the queue: the viewer keeps watching instead of an error card.
+        if (!_replaying.value && failover?.invoke() == true) return
         if (!scheduleRetry()) _errors.tryEmit(error)
     }
+
+    /** Set by the live view model: play a backup of the current channel; true = taken over (no error shown, no retry). */
+    var failover: (() -> Boolean)? = null
 
     /** Queues the next retry (1s, 2s, 4s); false once they are used up. */
     private fun scheduleRetry(): Boolean {
@@ -206,15 +380,45 @@ class PlayerManager(private val context: Context) {
         override fun onLoadError(t: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, l: androidx.media3.exoplayer.source.LoadEventInfo,
             m: androidx.media3.exoplayer.source.MediaLoadData, e: java.io.IOException, wasCanceled: Boolean) =
             Log.w(TAG, "load error (retried by the player) ${tail(url)}: $e").let { }
-        override fun onAudioUnderrun(t: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, bufferSize: Int, bufferSizeMs: Long, elapsedSinceLastFeedMs: Long) =
-            Log.w(TAG, "audio underrun ${elapsedSinceLastFeedMs} ms since last feed ${tail(url)}").let { }
-        override fun onDroppedVideoFrames(t: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) =
-            Log.w(TAG, "dropped $droppedFrames video frames ${tail(url)}").let { }
+        override fun onAudioUnderrun(t: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, bufferSize: Int, bufferSizeMs: Long, elapsedSinceLastFeedMs: Long) {
+            Log.w(TAG, "audio underrun ${elapsedSinceLastFeedMs} ms since last feed ${tail(url)}")
+            stat { it.underruns++ }
+        }
+        override fun onDroppedVideoFrames(t: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, droppedFrames: Int, elapsedMs: Long) {
+            Log.w(TAG, "dropped $droppedFrames video frames ${tail(url)}")
+            stat { it.droppedFrames += droppedFrames }
+        }
         override fun onAudioDecoderInitialized(t: androidx.media3.exoplayer.analytics.AnalyticsListener.EventTime, decoderName: String,
             initializedTimestampMs: Long, initializationDurationMs: Long) =
             Log.i(TAG, "audio decoder $decoderName ($audioDecoder setting)").let { }
     }
     init { player.addAnalyticsListener(diagnostics) }
+
+    // --- Playback diagnostics (opt-in upload to the panel; counted always, sent only when asked) ---
+
+    /** Per-channel totals since the last [drainStats]; the channel's display name is set by the view models. */
+    class ChannelStats {
+        var seconds = 0L; var stalls = 0; var underruns = 0; var droppedFrames = 0; var errors = 0
+        fun copy() = ChannelStats().also { it.seconds = seconds; it.stalls = stalls; it.underruns = underruns; it.droppedFrames = droppedFrames; it.errors = errors }
+    }
+    var channelLabel: String? = null
+    private val stats = java.util.concurrent.ConcurrentHashMap<String, ChannelStats>()
+    private fun stat(f: (ChannelStats) -> Unit) { channelLabel?.let { f(stats.getOrPut(it) { ChannelStats() }) } }
+    /** Takes the totals collected so far (and starts counting again); empty when nothing played. */
+    fun drainStats(): Map<String, ChannelStats> {
+        val out = stats.entries.associate { it.key to it.value.copy() }
+        stats.clear()
+        return out
+    }
+    // Watched seconds: a coarse 5 s tick while actually playing (no per-frame work).
+    private val statsTick = object : Runnable {
+        override fun run() {
+            if (player.isPlaying) stat { it.seconds += 5 }
+            _replayReady.value = !_replaying.value && !vod && replayBuffer.ready()
+            handler.postDelayed(this, 5_000)
+        }
+    }
+    init { handler.postDelayed(statsTick, 5_000) }
 
     /** [login] fills the Xtream placeholders in [url] (saved links hold no login); [url] itself stays the key for comparisons. */
     /** [startMs]: a movie/episode starts there (resume), applied when the stream loads, also after the guard or a portal link. */
@@ -237,10 +441,16 @@ class PlayerManager(private val context: Context) {
         startAt = startMs
         handler.removeCallbacks(retry)
         retries = 0
-        applyDecoder() // a new stream: a pending decoder change takes effect now, before playWhenReady is set on it
+        stallReloads = 0
+        applyDecoder() // a new stream: a pending decoder/profile change takes effect now, before playWhenReady is set on it
         player.playWhenReady = true
         this.vod = vod
-        applySubtitles(player) // a new title follows the setting again, not the last title's subtitles-button choice
+        // A new title follows the settings again: last title's subtitles/audio-button choices are dropped.
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().clearOverridesOfType(C.TRACK_TYPE_AUDIO).build()
+        applySubtitles(player)
+        applyAudioLanguage(player)
+        if (defaultSleepMin > 0 && _sleepEndsAt.value == null) setSleepTimer(defaultSleepMin)
+        leaveReplay(clearBuffer = true)
         this.url = url
         this.userAgent = userAgent
         this.login = login
@@ -254,6 +464,7 @@ class PlayerManager(private val context: Context) {
     }
 
     private val stall = StallClock(START_STALL_MS, STALL_MS)
+    private var stallReloads = 0
     // A live stream can freeze with no error (picture and sound stop); loading it again is what fixed it by hand.
     private val watchdog = object : Runnable {
         override fun run() {
@@ -263,7 +474,10 @@ class PlayerManager(private val context: Context) {
             if (player.playbackState == Player.STATE_IDLE || !player.playWhenReady) return stall.reset()
             if (stall.update(player.currentPosition, android.os.SystemClock.elapsedRealtime())) {
                 Log.w(TAG, "stalled in ${arrayOf("?", "IDLE", "BUFFERING", "READY", "ENDED")[player.playbackState]}, reloading ${tail(url)}")
+                stat { it.stalls++ }
                 stall.reset() // the reconnect gets the start limit, or a slow provider would be reloaded in a loop
+                // Three freezes in a row on the same stream: a backup takes over if the channel has one.
+                if (++stallReloads == STALLS_BEFORE_FAILOVER && failover?.invoke() == true) return
                 start()
             }
         }
@@ -301,7 +515,12 @@ class PlayerManager(private val context: Context) {
         }
         // A live .ts stream reconnects by itself when the provider ends or stalls the connection (LiveTsDataSource).
         val liveTs = !vod && spec == null && android.net.Uri.parse(req.url).lastPathSegment?.endsWith(".ts", ignoreCase = true) == true
-        val upstream = if (liveTs) androidx.media3.datasource.DataSource.Factory { LiveTsDataSource(http.createDataSource()) } else http
+        var upstream = if (liveTs) androidx.media3.datasource.DataSource.Factory { LiveTsDataSource(http.createDataSource()) } else http
+        // Instant replay: tee the bytes this same connection reads into the rolling buffer (no second provider connection).
+        if (!vod && spec == null && instantReplayOn) {
+            val inner = upstream
+            upstream = androidx.media3.datasource.DataSource.Factory { ReplayTeeDataSource(inner.createDataSource(), replayBuffer) }
+        }
         val factory = DefaultMediaSourceFactory(DefaultDataSource.Factory(context, upstream))
         spec?.let { factory.setDrmSessionManagerProvider(drmSessions(it, http)) }
         // A stream format with no module in the app (e.g. Smooth Streaming) throws here: report it, don't crash.
@@ -344,6 +563,12 @@ class PlayerManager(private val context: Context) {
     }
 
     private fun mediaItem(uri: String, spec: DrmSpec?): MediaItem = MediaItem.Builder().setUri(uri).apply {
+        // Low latency: stay a few seconds behind the live edge (HLS/DASH; a raw .ts stream is already at the edge).
+        if (!vod && connectionProfile == org.imdtv.iptvtv.data.settings.ConnectionProfile.LOW_LATENCY) {
+            setLiveConfiguration(MediaItem.LiveConfiguration.Builder()
+                .setTargetOffsetMs(4_000).setMinOffsetMs(2_000).setMaxOffsetMs(8_000)
+                .setMinPlaybackSpeed(0.97f).setMaxPlaybackSpeed(1.03f).build())
+        }
         spec ?: return@apply
         setDrmConfiguration(MediaItem.DrmConfiguration.Builder(if (spec.scheme == DrmScheme.WIDEVINE) C.WIDEVINE_UUID else C.CLEARKEY_UUID).apply {
             // The playlist's licence server wins over one named in the manifest, as in Kodi.
@@ -370,6 +595,7 @@ class PlayerManager(private val context: Context) {
         handler.removeCallbacks(retry)
         resolving?.cancel()
         retries = 0
+        leaveReplay(clearBuffer = true)
         applyDecoder()
         player.playWhenReady = true
         this.vod = true
@@ -400,6 +626,7 @@ class PlayerManager(private val context: Context) {
         PlayerView.switchTargetView(player, this.view, view)
         this.view?.keepScreenOn = false
         this.view = view
+        applySubtitleStyle()
         view.keepScreenOn = player.isPlaying
     }
 
@@ -447,6 +674,7 @@ class PlayerManager(private val context: Context) {
         handler.removeCallbacks(watchdog)
         resolving?.cancel()
         retries = 0
+        leaveReplay(clearBuffer = true)
         url = null
         _formats.value = StreamFormats.UNKNOWN
         player.stop()
@@ -456,6 +684,8 @@ class PlayerManager(private val context: Context) {
 
     private companion object {
         const val MAX_RETRIES = 3
+        /** Watchdog reloads of the same stream before a backup (if any) takes over. */
+        const val STALLS_BEFORE_FAILOVER = 3
         /** Longer than the gaps of providers that send in bursts, short enough that a dead stream is retried within the buffer. */
         const val READ_TIMEOUT_MS = 20_000
         const val WATCH_MS = 2_000L
@@ -468,6 +698,23 @@ class PlayerManager(private val context: Context) {
         fun tail(url: String?) = url?.substringBefore('|')?.substringAfterLast('/') // headers may hold tokens too
     }
 }
+
+/**
+ * Buffer sizes for the Connection profile setting. Stable line keeps Media3's deep minimum buffer and raises the
+ * maximum (bad Wi-Fi rides through longer drops); Low latency holds a shallow buffer and starts sooner.
+ */
+@OptIn(UnstableApi::class)
+fun loadControl(profile: org.imdtv.iptvtv.data.settings.ConnectionProfile): androidx.media3.exoplayer.LoadControl =
+    when (profile) {
+        org.imdtv.iptvtv.data.settings.ConnectionProfile.STABLE -> androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(50_000, 90_000, 2_500, 5_000).build()
+        org.imdtv.iptvtv.data.settings.ConnectionProfile.LOW_LATENCY -> androidx.media3.exoplayer.DefaultLoadControl.Builder()
+            .setBufferDurationsMs(8_000, 20_000, 1_000, 2_000).build()
+    }
+
+/** One audio track of the playing stream (the overlay's Audio track menu); [groupIndex]/[trackIndex] address it. */
+data class AudioTrackOption(val groupIndex: Int, val trackIndex: Int, val language: String?, val label: String?,
+                            val channelCount: Int?, val codec: String?, val selected: Boolean)
 
 /**
  * Subtitle track selection for the Subtitles setting: on → only a track in [language]; off → none. Either way a track

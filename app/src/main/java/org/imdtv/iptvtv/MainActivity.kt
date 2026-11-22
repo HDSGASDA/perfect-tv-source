@@ -142,6 +142,50 @@ class MainActivity : ComponentActivity() {
             (application as IptvApp).container.settings.settings.map { Triple(it.subtitlesOn, it.subtitleLanguage, it.liveSubtitlesOn) }.distinctUntilChanged()
                 .collect { (on, language, live) -> app.player.setSubtitles(on, language, live) }
         }
+        // Playback: audio language, connection profile, sleep timer default, instant replay, subtitle appearance.
+        lifecycleScope.launch {
+            (application as IptvApp).container.settings.settings.map { it.audioLanguage }.distinctUntilChanged()
+                .collect { app.player.setAudioLanguage(it) }
+        }
+        lifecycleScope.launch {
+            (application as IptvApp).container.settings.settings.map { it.connectionProfile }.distinctUntilChanged()
+                .collect { app.player.setConnectionProfile(it) }
+        }
+        lifecycleScope.launch {
+            (application as IptvApp).container.settings.settings.map { it.sleepTimerMin }.distinctUntilChanged()
+                .collect { app.player.defaultSleepMin = it }
+        }
+        lifecycleScope.launch {
+            (application as IptvApp).container.settings.settings.map { it.instantReplayOn }.distinctUntilChanged()
+                .collect { app.player.instantReplayOn = it }
+        }
+        lifecycleScope.launch {
+            (application as IptvApp).container.settings.settings
+                .map { Triple(it.subtitleSize, it.subtitlePosition, it.subtitleBackground) }.distinctUntilChanged()
+                .collect { (size, pos, bg) -> app.player.setSubtitleAppearance(size.fraction, pos.fraction, bg.color) }
+        }
+        // The sleep timer fired: leave the full-screen player and say why.
+        lifecycleScope.launch {
+            app.player.sleepExpired.collect {
+                (application as IptvApp).container.recordings.prompt.value =
+                    org.imdtv.iptvtv.recording.Prompt.Notice("", leavePlayer = true, res = R.string.live_sleep_stopped)
+            }
+        }
+        // Opt-in playback diagnostics: move the player's counters to the container while the app is open;
+        // the worker uploads them (managed builds, only with the setting on).
+        lifecycleScope.launch {
+            val container = (application as IptvApp).container
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    delay(5 * 60_000L)
+                    container.collectPlaybackStats()
+                }
+            }
+        }
+        lifecycleScope.launch {
+            (application as IptvApp).container.settings.settings.map { it.diagnosticsOn }.distinctUntilChanged()
+                .collect { org.imdtv.iptvtv.work.DiagnosticsWorker.schedule(this@MainActivity, it) }
+        }
         lifecycleScope.launch {
             (application as IptvApp).container.settings.settings.map { it.clock24h }.distinctUntilChanged()
                 .collect { org.imdtv.iptvtv.ui.use24Hour = it }
@@ -276,7 +320,8 @@ class MainActivity : ComponentActivity() {
                             app.playFullScreen(title, live = false)
                         }, onOpen = app::open)
                         is Screen.Player -> PlayerScreen(app.player, top.title, live.takeIf { top.live }, onGuide = { app.back() }, showClock = settings.playerClock == org.imdtv.iptvtv.data.settings.PlayerClock.ALL ||
-                            settings.playerClock == org.imdtv.iptvtv.data.settings.PlayerClock.LIVE && top.live, aspect = settings.videoAspect)
+                            settings.playerClock == org.imdtv.iptvtv.data.settings.PlayerClock.LIVE && top.live, aspect = settings.videoAspect,
+                            vodVm = vod.takeIf { !top.live && top.recordingId == null }, matchRefreshRate = settings.matchRefreshRate)
                     }
                     }
                     // Xcube 180: Live, Movies, Series and Settings are blades inside one frame (spec §6A.7).
@@ -290,6 +335,8 @@ class MainActivity : ComponentActivity() {
                     }
                     org.imdtv.iptvtv.ui.live.NumberEntryBox(live)
                     org.imdtv.iptvtv.ui.settings.PairingPrompt((application as IptvApp).container.sync)
+                    // Parental controls: the PIN dialog over any screen (a locked category or Settings asked).
+                    org.imdtv.iptvtv.ui.settings.PinPrompt((application as IptvApp).container.pin)
                     org.imdtv.iptvtv.data.update.UpdatePrompt((application as IptvApp).container.updater, (application as IptvApp).container.background)
                     org.imdtv.iptvtv.data.update.WhatsNewPrompt((application as IptvApp).container.updater)
                     if (BuildConfig.MANAGED) org.imdtv.iptvtv.data.management.AnnouncementPrompt(

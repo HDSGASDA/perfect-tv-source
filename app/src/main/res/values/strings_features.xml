@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Connection profile -->
+    <string name="set_b_profile_stable">Stable line</string>
+    <string name="set_b_profile_low_latency">Low latency</string>
+    <string name="set_b_connection_profile">Connection profile</string>
+    <string name="set_b_connection_profile_expl">Stable line buffers more against bad Wi-Fi; Low latency stays closer to live</string>
+    <!-- Sleep timer -->
+    <string name="set_b_sleep_timer">Sleep timer</string>
+    <string name="set_b_sleep_timer_expl">Stop playback automatically after this time; off by default</string>
+    <string name="set_b_sleep_off">Off</string>
+    <string name="set_b_sleep_min">%1$d min</string>
+    <string name="live_menu_sleep_timer">Sleep timer: %1$s</string>
+    <string name="live_sleep_stopped">Sleep timer — playback stopped</string>
+    <string name="live_sleep_left">%1$d min left</string>
+    <!-- Audio language / tracks -->
+    <string name="set_b_audio_language">Audio language</string>
+    <string name="set_b_audio_language_expl">Prefer audio tracks in this language when a stream carries several</string>
+    <string name="set_b_audio_auto">Stream default</string>
+    <string name="live_menu_audio_track">Audio track</string>
+    <string name="live_audio_auto">Automatic</string>
+    <string name="live_audio_track_n">Track %1$d</string>
+    <!-- Next episode -->
+    <string name="set_b_autoplay_next">Autoplay next episode</string>
+    <string name="set_b_autoplay_next_expl">Series: play the next episode after a 10-second countdown</string>
+    <string name="vod_next_up">Next: %1$s</string>
+    <string name="vod_next_in">Playing in %1$d s</string>
+    <string name="vod_next_now">Play now</string>
+    <!-- Subtitle appearance -->
+    <string name="set_b_sub_appearance">Subtitle appearance</string>
+    <string name="set_b_sub_appearance_expl">Size, position and background of subtitles</string>
+    <string name="set_b_sub_size">Subtitle size</string>
+    <string name="set_b_sub_size_expl">How large subtitle text is drawn</string>
+    <string name="set_b_sub_size_default">Default</string>
+    <string name="set_b_sub_size_xl">Extra large</string>
+    <string name="set_b_sub_position">Subtitle position</string>
+    <string name="set_b_sub_position_expl">How high above the bottom edge subtitles sit</string>
+    <string name="set_b_sub_pos_low">Low</string>
+    <string name="set_b_sub_pos_default">Default</string>
+    <string name="set_b_sub_pos_high">High</string>
+    <string name="set_b_sub_background">Subtitle background</string>
+    <string name="set_b_sub_background_expl">The box drawn behind subtitle text</string>
+    <string name="set_b_sub_bg_none">None</string>
+    <string name="set_b_sub_bg_translucent">Translucent</string>
+    <string name="set_b_sub_bg_black">Black</string>
+    <!-- Parental controls -->
+    <string name="set_b_parental">Parental controls</string>
+    <string name="set_b_parental_expl">Lock categories and Settings behind a 4-digit PIN</string>
+    <string name="set_b_parental_pin_set">Change PIN</string>
+    <string name="set_b_parental_pin_new">Set PIN</string>
+    <string name="set_b_parental_pin_expl">Asked for when opening a locked category</string>
+    <string name="set_b_parental_pin_remove">Remove PIN</string>
+    <string name="set_b_parental_pin_remove_expl">Turn off the parental lock and unlock every category</string>
+    <string name="set_b_pin_remove_confirm">Press OK again to remove the PIN and unlock everything</string>
+    <string name="set_b_parental_lock_settings">Lock Settings</string>
+    <string name="set_b_parental_lock_settings_expl">Ask for the PIN when opening Settings too</string>
+    <string name="set_b_parental_categories">Locked categories</string>
+    <string name="set_b_parental_categories_expl">Choose which live, movie and series categories ask for the PIN</string>
+    <string name="set_b_pin_none">No PIN</string>
+    <string name="set_b_pin_set_value">PIN set</string>
+    <string name="set_b_pin_enter">Enter PIN</string>
+    <string name="set_b_pin_enter_for">Enter PIN for %1$s</string>
+    <string name="set_b_pin_wrong">Wrong PIN — try again</string>
+    <string name="set_b_pin_new_hint">New PIN (4 digits)</string>
+    <string name="set_b_pin_confirm_hint">Confirm PIN</string>
+    <string name="set_b_pin_mismatch">The PINs don\'t match</string>
+    <string name="set_b_pin_digits">The PIN must be exactly 4 digits</string>
+    <string name="set_b_pin_saved">Parental PIN saved</string>
+    <string name="set_b_pin_removed">Parental lock removed</string>
+    <!-- Instant replay -->
+    <string name="set_b_instant_replay">Live pause &amp; instant replay</string>
+    <string name="set_b_instant_replay_expl">Keep a rolling buffer while watching full screen, so live TV can be paused and rewound</string>
+    <string name="live_overlay_pause_live">Pause live</string>
+    <string name="live_overlay_back_live">Back to live</string>
+    <string name="live_replay_starting">Preparing replay…</string>
+    <!-- Refresh rate -->
+    <string name="set_b_match_refresh">Match TV refresh rate</string>
+    <string name="set_b_match_refresh_expl">Switch the TV\'s display mode to the stream\'s frame rate to reduce judder; not every box supports this</string>
+    <!-- Diagnostics -->
+    <string name="set_b_diagnostics">Send playback diagnostics</string>
+    <string name="set_b_diagnostics_expl">Share anonymous stall and error totals with your service\'s panel to help find bad channels; no account details</string>
+    <!-- Backup stream -->
+    <string name="live_menu_backup">Backup stream…</string>
+    <string name="live_menu_backup_title">Backup stream for %1$s</string>
+    <string name="live_backup_hint">Backup URL (empty removes it)</string>
+    <string name="live_backup_saved">Backup stream saved</string>
+    <string name="live_failover_backup">Stream failed — trying the backup</string>
+</resources>

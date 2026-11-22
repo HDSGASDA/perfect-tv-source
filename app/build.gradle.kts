@@ -3,7 +3,6 @@ import java.util.Properties
 
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
@@ -11,7 +10,8 @@ plugins {
 
 android {
     namespace = "org.imdtv.iptvtv"
-    compileSdk = 35
+    compileSdk = 37
+    compileSdkMinor = 2
 
     defaultConfig {
         applicationId = "org.imdtv.iptvtv"
@@ -35,8 +35,8 @@ android {
         create("managed") {
             dimension = "distribution"
             applicationIdSuffix = ".managed"
-            versionCode = providers.gradleProperty("managedVersionCode").orElse("20").get().toInt().also { require(it > 0) }
-            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.2-managed.8").get()
+            versionCode = providers.gradleProperty("managedVersionCode").orElse("22").get().toInt().also { require(it > 0) }
+            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.2-managed.10").get()
             buildConfigField("boolean", "MANAGED", "true")
             buildConfigField("String", "PANEL_BASE_URL", "\"$panelUrl\"")
         }
@@ -83,9 +83,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
 
     testOptions {
         unitTests.isIncludeAndroidResources = true
@@ -121,6 +118,7 @@ dependencies {
     implementation(libs.media3.ffmpeg)
     implementation(libs.work.runtime)
     implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
     implementation(libs.smbj) // recordings on a network share
     implementation(libs.zxing.core) // QR code for the log page
 

@@ -78,6 +78,19 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     private val smbFolder = stringPreferencesKey("smb_folder")
     private val smbUser = stringPreferencesKey("smb_user")
     private val smbPassword = stringPreferencesKey("smb_password")
+    private val sleepTimerMin = intPreferencesKey("sleep_timer_min")
+    private val audioLanguage = stringPreferencesKey("audio_language")
+    private val autoplayNext = booleanPreferencesKey("autoplay_next")
+    private val subtitleSize = stringPreferencesKey("subtitle_size")
+    private val subtitlePosition = stringPreferencesKey("subtitle_position")
+    private val subtitleBackground = stringPreferencesKey("subtitle_background")
+    private val parentalPin = stringPreferencesKey("parental_pin")
+    private val lockedCategories = androidx.datastore.preferences.core.stringSetPreferencesKey("locked_categories")
+    private val lockSettings = booleanPreferencesKey("lock_settings")
+    private val connectionProfile = stringPreferencesKey("connection_profile")
+    private val instantReplayOn = booleanPreferencesKey("instant_replay_on")
+    private val matchRefreshRate = booleanPreferencesKey("match_refresh_rate")
+    private val diagnosticsOn = booleanPreferencesKey("diagnostics_on")
 
     val settings: Flow<AppSettings> = prefs.data.map { it.toSettings() }.distinctUntilChanged()
 
@@ -149,6 +162,19 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
             smbFolder = this[smbFolder] ?: "",
             smbUser = this[smbUser] ?: "",
             smbPassword = org.imdtv.iptvtv.data.security.Secrets.decrypt(this[smbPassword]) ?: "",
+            sleepTimerMin = this[sleepTimerMin] ?: d.sleepTimerMin,
+            audioLanguage = this[audioLanguage],
+            autoplayNext = this[autoplayNext] ?: d.autoplayNext,
+            subtitleSize = SubtitleSize.entries.find { it.name == this[subtitleSize] } ?: d.subtitleSize,
+            subtitlePosition = SubtitlePosition.entries.find { it.name == this[subtitlePosition] } ?: d.subtitlePosition,
+            subtitleBackground = SubtitleBackground.entries.find { it.name == this[subtitleBackground] } ?: d.subtitleBackground,
+            parentalPin = org.imdtv.iptvtv.data.security.Secrets.decrypt(this[parentalPin]) ?: "",
+            lockedCategories = this[lockedCategories].orEmpty().mapNotNull { it.toLongOrNull() }.toSet(),
+            lockSettings = this[lockSettings] ?: d.lockSettings,
+            connectionProfile = ConnectionProfile.entries.find { it.name == this[connectionProfile] } ?: d.connectionProfile,
+            instantReplayOn = this[instantReplayOn] ?: d.instantReplayOn,
+            matchRefreshRate = this[matchRefreshRate] ?: d.matchRefreshRate,
+            diagnosticsOn = this[diagnosticsOn] ?: d.diagnosticsOn,
         ).clamped()
     }
 
@@ -214,6 +240,22 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
         if (org.imdtv.iptvtv.data.security.Secrets.decrypt(this[smbPassword]).orEmpty() != s.smbPassword) {
             this[smbPassword] = org.imdtv.iptvtv.data.security.Secrets.encrypt(s.smbPassword).orEmpty()
         }
+        this[sleepTimerMin] = s.sleepTimerMin
+        s.audioLanguage?.let { this[audioLanguage] = it } ?: remove(audioLanguage)
+        this[autoplayNext] = s.autoplayNext
+        this[subtitleSize] = s.subtitleSize.name
+        this[subtitlePosition] = s.subtitlePosition.name
+        this[subtitleBackground] = s.subtitleBackground.name
+        // Re-encrypt only when changed, as the SMB password.
+        if (org.imdtv.iptvtv.data.security.Secrets.decrypt(this[parentalPin]).orEmpty() != s.parentalPin) {
+            if (s.parentalPin.isEmpty()) remove(parentalPin) else this[parentalPin] = org.imdtv.iptvtv.data.security.Secrets.encrypt(s.parentalPin).orEmpty()
+        }
+        this[lockedCategories] = s.lockedCategories.map { it.toString() }.toSet()
+        this[lockSettings] = s.lockSettings
+        this[connectionProfile] = s.connectionProfile.name
+        this[instantReplayOn] = s.instantReplayOn
+        this[matchRefreshRate] = s.matchRefreshRate
+        this[diagnosticsOn] = s.diagnosticsOn
     }
 
     private companion object {

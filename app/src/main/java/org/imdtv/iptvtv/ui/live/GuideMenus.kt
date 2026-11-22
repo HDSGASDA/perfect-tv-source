@@ -49,6 +49,12 @@ internal sealed interface GuideMenu {
     data class PickDay(val ch: ChannelEntity, val windowMin: Int) : GuideMenu
     /** The full-screen overlay's Settings card: subtitles, record, favourite, add to category. */
     data class Player(val ch: ChannelEntity) : GuideMenu
+    /** Player menu › Sleep timer: off or a number of minutes from now. */
+    data class SleepTimer(val ch: ChannelEntity) : GuideMenu
+    /** Player menu › Audio track: the playing stream's audio tracks (many IPTV streams carry several). */
+    data class AudioTrack(val ch: ChannelEntity) : GuideMenu
+    /** Player menu › Backup stream…: the alternate URL played when the main one fails. */
+    data class Backup(val ch: ChannelEntity) : GuideMenu
     /** OK on a later programme highlighted in the guide. */
     data class Programme(val ch: ChannelEntity, val p: org.imdtv.iptvtv.data.repo.GuideProgramme) : GuideMenu
     data class CancelRecording(val ch: ChannelEntity, val p: org.imdtv.iptvtv.data.repo.GuideProgramme) : GuideMenu
@@ -121,8 +127,40 @@ fun GuideMenus(vm: LiveViewModel, state: GuideState) {
                 val fav = m.ch.id in favourites
                 add((if (fav) stringResource(R.string.live_menu_fav_remove) else stringResource(R.string.live_menu_fav_add)) to { vm.toggleFavourite(m.ch); state.menu = null })
                 add(stringResource(R.string.live_menu_add_to_category) to { state.menu = GuideMenu.AddTo(m.ch) })
+                // Sleep timer: the running countdown wins over the setting's default on the label.
+                val endsAt = vm.player.sleepEndsAt.collectAsState().value
+                val sleepLabel = endsAt?.let { stringResource(R.string.live_sleep_left, ((it - android.os.SystemClock.elapsedRealtime() + 59_999) / 60_000).toInt().coerceAtLeast(1)) }
+                    ?: vm.settings.collectAsState().value.sleepTimerMin.takeIf { it > 0 }?.let { stringResource(R.string.set_b_sleep_min, it) }
+                    ?: stringResource(R.string.set_b_sleep_off)
+                add(stringResource(R.string.live_menu_sleep_timer, sleepLabel) to { state.menu = GuideMenu.SleepTimer(m.ch) })
+                if (vm.player.audioTracks().isNotEmpty()) add(stringResource(R.string.live_menu_audio_track) to { state.menu = GuideMenu.AudioTrack(m.ch) })
+                add(stringResource(R.string.live_menu_backup) to { state.menu = GuideMenu.Backup(m.ch) })
             }) { state.menu = null }
         }
+        is GuideMenu.SleepTimer -> {
+            val current = vm.player.sleepEndsAt.collectAsState().value != null
+            ContextMenu(stringResource(R.string.set_b_sleep_timer), org.imdtv.iptvtv.data.settings.SLEEP_TIMER_MINUTES.map { min ->
+                (if (min == 0) stringResource(R.string.set_b_sleep_off) else stringResource(R.string.set_b_sleep_min, min)) to {
+                    vm.setSleepTimer(min); state.menu = null
+                }
+            }, if (current) 0 else org.imdtv.iptvtv.data.settings.SLEEP_TIMER_MINUTES.indexOf(vm.settings.collectAsState().value.sleepTimerMin).coerceAtLeast(0)) { state.menu = GuideMenu.Player(m.ch) }
+        }
+        is GuideMenu.AudioTrack -> {
+            val tracks = vm.player.audioTracks()
+            ContextMenu(stringResource(R.string.live_menu_audio_track), buildList {
+                add(stringResource(R.string.live_audio_auto) to { vm.player.autoAudioTrack(); state.menu = null })
+                tracks.forEachIndexed { i, t ->
+                    val lang = t.language?.takeIf { it != "und" }?.let { java.util.Locale(it).displayLanguage }
+                    val name = t.label ?: lang ?: stringResource(R.string.live_audio_track_n, i + 1)
+                    val detail = listOfNotNull(lang.takeIf { t.label != null }, t.channelCount?.let { "$it ch" }, t.codec?.substringAfterLast('.'))
+                    add((if (t.selected) "● " else "") + name + detail.takeIf { it.isNotEmpty() }?.joinToString(" · ", " · ").orEmpty() to {
+                        vm.player.selectAudioTrack(t); state.menu = null
+                    })
+                }
+            }) { state.menu = GuideMenu.Player(m.ch) }
+        }
+        is GuideMenu.Backup -> TextPrompt(stringResource(R.string.live_menu_backup_title, m.ch.displayName(strip)), m.ch.backupUrl.orEmpty(),
+            stringResource(R.string.live_backup_hint), onSave = { vm.setBackupUrl(m.ch, it); state.menu = null }) { state.menu = GuideMenu.Player(m.ch) }
         // Back from a sub-menu returns to the channel's menu.
         is GuideMenu.Recording -> ContextMenu(stringResource(R.string.live_menu_recording_title, m.ch.displayName(strip)), buildList {
             val rec = recordingOnChannel[m.ch.id]

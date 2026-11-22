@@ -188,6 +188,8 @@ abstract class ChannelDao {
     @Query("UPDATE channel SET sortOrder = NULL WHERE providerId = :p") abstract suspend fun clearSortOrders(p: Long)
     @Query("UPDATE channel SET customName = :name WHERE id = :id") abstract suspend fun setCustomName(id: Long, name: String?)
     @Query("UPDATE channel SET epgOffsetMinutes = :minutes WHERE id = :id") abstract suspend fun setEpgOffset(id: Long, minutes: Int?)
+    /** The channel's alternate URL (Backup stream…); null removes it. A sync never touches this user column. */
+    @Query("UPDATE channel SET backupUrl = :url WHERE id = :id") abstract suspend fun setBackupUrl(id: Long, url: String?)
 
     /** Merge: channels played through [id] (its sources other than itself). */
     @Query("SELECT * FROM channel WHERE mergedInto = :id") abstract suspend fun mergedInto(id: Long): List<ChannelEntity>

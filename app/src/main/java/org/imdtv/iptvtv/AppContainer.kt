@@ -82,6 +82,42 @@ class AppContainer(context: Context) {
     val logos: LogoRepository by lazy { LogoRepository(db, http, logoDir) }
     val logoPack: LogoPackRepository by lazy { LogoPackRepository(db, logoDir) }
     val settings: SettingsRepository by lazy { SettingsRepository(prefs) }
+
+    /** Parental controls: the app-wide PIN gate (live, movies, series, Settings). */
+    val pin: org.imdtv.iptvtv.data.security.PinGate by lazy {
+        org.imdtv.iptvtv.data.security.PinGate().also { g ->
+            background.launch {
+                var lastPin = ""
+                settings.settings.collect { s ->
+                    if (s.parentalPin != lastPin) { g.relock(); lastPin = s.parentalPin }
+                    g.current = s
+                }
+            }
+        }
+    }
+
+    /** Opt-in playback totals waiting for the next diagnostics upload (channel display names only, no account data). */
+    val playbackTotals = java.util.concurrent.ConcurrentHashMap<String, PlayerManager.ChannelStats>()
+    /** Moves the player's counters into [playbackTotals]; called periodically while the app is open. */
+    fun collectPlaybackStats() {
+        if (!player.isInitialized()) return
+        playerManager.drainStats().forEach { (name, s) ->
+            playbackTotals.merge(name, s) { a, b ->
+                a.apply { seconds += b.seconds; stalls += b.stalls; underruns += b.underruns; droppedFrames += b.droppedFrames; errors += b.errors }
+            }
+        }
+    }
+    /** Takes up to [limit] channel totals for one upload (they keep counting from zero afterwards). */
+    fun takePlaybackTotals(limit: Int = 200): Map<String, PlayerManager.ChannelStats> =
+        playbackTotals.keys().asSequence().take(limit).mapNotNull { k -> playbackTotals.remove(k)?.let { k to it } }.toMap()
+    /** An upload failed: the batch goes back so the next attempt sends it. */
+    fun returnPlaybackTotals(batch: Map<String, PlayerManager.ChannelStats>) {
+        batch.forEach { (name, s) ->
+            playbackTotals.merge(name, s) { a, b ->
+                a.apply { seconds += b.seconds; stalls += b.stalls; underruns += b.underruns; droppedFrames += b.droppedFrames; errors += b.errors }
+            }
+        }
+    }
     val epgImporter: EpgImporter by lazy { EpgImporter(db, http, XmltvParser()) }
     val epgMatcher: EpgMatcher by lazy { EpgMatcher(db, settings = { settings.settings.first() }, ownUrls = { providerRepository.playlistGuideUrls(it) }) }
     val epgShare: EpgShareSources by lazy {

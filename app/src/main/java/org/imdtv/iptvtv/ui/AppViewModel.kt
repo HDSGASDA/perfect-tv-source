@@ -106,7 +106,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun push(s: Screen) { stack.value = stack.value + s }
 
     fun selectTab(t: Tab) {
-        if (t == Tab.SETTINGS) { push(Screen.Settings()); return }
+        if (t == Tab.SETTINGS) {
+            // Parental controls › Lock Settings: the PIN dialog opens; Settings follows a correct entry.
+            if (c.pin.requireSettings { selectTab(Tab.SETTINGS) }) return
+            push(Screen.Settings()); return
+        }
         if (t != Tab.LIVE) player.stop() // the live preview shouldn't keep playing behind Movies/Series
         tab.value = t
         stack.value = listOf(when (t) { Tab.LIVE -> Screen.Live; Tab.SEARCH -> Screen.Search; Tab.RECORDINGS -> Screen.Recordings; else -> Screen.Vod })
@@ -121,7 +125,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun open(item: VodItem) = push(Screen.Detail(item))
 
     /** Gamestation: an XMB Settings item opens Settings on that group. */
-    fun openSettings(group: org.imdtv.iptvtv.ui.settings.SettingsGroup) = push(Screen.Settings(group))
+    fun openSettings(group: org.imdtv.iptvtv.ui.settings.SettingsGroup) {
+        if (c.pin.requireSettings { openSettings(group) }) return
+        push(Screen.Settings(group))
+    }
 
     fun playFullScreen(title: String, live: Boolean) = push(Screen.Player(title, live))
 

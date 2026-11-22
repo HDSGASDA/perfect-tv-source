@@ -14,7 +14,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
-import coil.compose.SubcomposeAsyncImage
+import coil3.compose.SubcomposeAsyncImage
 import org.imdtv.iptvtv.data.db.ChannelEntity
 import org.imdtv.iptvtv.data.logos.shownLogos
 import androidx.compose.runtime.getValue

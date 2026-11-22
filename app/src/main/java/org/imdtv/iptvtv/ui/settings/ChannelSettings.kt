@@ -85,6 +85,7 @@ enum class ChannelPage(@StringRes val titleRes: Int, @StringRes val explanationR
     MERGE_PLAYLISTS(R.string.set_a_page_merge_playlists, R.string.set_a_page_merge_playlists_expl, "Playlists", "Which playlists merge their channels", parent = MERGE_OPTIONS),
     // Not channel pages, but the same open/Back/refocus plumbing: Playback › Subtitles, Appearance › Date and time.
     SUBTITLES(R.string.set_a_page_subtitles, R.string.set_a_page_subtitles_expl, "Subtitles", "Movies & series and live TV"),
+    PARENTAL(R.string.set_b_parental, R.string.set_b_parental_expl, "Parental controls", "Lock categories and Settings behind a 4-digit PIN"),
     APPEARANCE_APP(R.string.set_a_page_app, R.string.set_a_page_app_expl, "App", "Theme, colours, date and time"),
     APPEARANCE_LIVE(R.string.set_b_live_tv, R.string.set_a_page_live_tv_expl, "Live TV", "Guide rows, header and titles"),
     APPEARANCE_VOD(R.string.set_b_movies_series, R.string.set_a_page_vod_expl, "Movies & Series", "Rows and titles"),
@@ -167,6 +168,7 @@ fun ChannelPageView(
             ChannelPage.MERGE_OPTIONS -> { BackHandler(onBack = onClose); MergeOptionsPage(vm, first, openers, onOpen) }
             ChannelPage.MERGE_PLAYLISTS -> { BackHandler(onBack = onClose); MergePlaylistsPage(vm, first) }
             ChannelPage.SUBTITLES -> { BackHandler(onBack = onClose); SubtitleRows(vm, first) }
+            ChannelPage.PARENTAL -> { BackHandler(onBack = onClose); ParentalPage(vm, first) }
             ChannelPage.DATE_TIME -> { BackHandler(onBack = onClose); DateTimeRows(vm, first) }
             ChannelPage.APPEARANCE_APP -> { BackHandler(onBack = onClose); AppearanceAppRows(vm, first, openers, onOpen) }
             ChannelPage.APPEARANCE_LIVE -> { BackHandler(onBack = onClose); AppearanceLiveRows(vm, first) }

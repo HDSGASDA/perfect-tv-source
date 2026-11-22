@@ -219,7 +219,7 @@ private fun RecordingRow(r: RecordingEntity, f: Boolean, textColor: Color) {
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (f) colors.focus else colors.cell).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(64.dp, 40.dp), contentAlignment = Alignment.Center) {
-            if (r.channelLogo != null) coil.compose.AsyncImage(r.channelLogo, null, Modifier.fillMaxSize())
+            if (r.channelLogo != null) coil3.compose.AsyncImage(r.channelLogo, null, Modifier.fillMaxSize())
             else Text(r.channelName.take(3), fontSize = 13.sp, color = fg, maxLines = 1)
         }
         Spacer(Modifier.width(16.dp))

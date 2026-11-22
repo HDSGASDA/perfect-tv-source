@@ -177,6 +177,7 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
     var xmb by androidx.compose.runtime.mutableStateOf(org.imdtv.iptvtv.ui.xmb.XmbState())
 
     init {
+        player.failover = ::tryFailover
         viewModelScope.launch {
             // A recreated activity (e.g. reopened after Back-exit) gets a fresh view model while the process-wide
             // player resumes the old stream: open the guide on that channel, or the preview would jump to the top row.
@@ -209,6 +210,9 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun select(e: RailEntry) {
+        // Parental controls: a locked category asks for the PIN first.
+        val cat = (e as? RailEntry.Provider)?.category
+        if (c.pin.requireCategory(cat?.id, cat?.name.orEmpty()) { select(e) }) return
         entry.value = e
         leavePast()
     }
@@ -326,6 +330,7 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
 
     fun preview(ch: ChannelEntity) {
         previewed.value = ch
+        player.channelLabel = ch.displayName(strip.value)
         previewJob?.cancel() // a latency check for the channel scrolled past stops here
         previewJob = viewModelScope.launch {
             // The playlist's login fills the link. At app start (last channel) it may not have loaded yet, and a link
@@ -334,10 +339,52 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
             // Merged channels play their best source (Settings › Channels › Merge by); others play themselves at once.
             val src = if (ch.mergeHead) org.imdtv.iptvtv.data.repo.ChannelMerge.pick(c.db, c.http, ch,
                 settings.value.mergeBy, p.userAgent, p.login()) else ch
+            armFailover(ch)
             if (previewed.value?.id == ch.id) { previewedUrl.value = src.streamUrl; player.play(src.streamUrl, p.userAgent, p.login(), drm = src.drm()) }
             c.settings.update { it.copy(lastLiveChannelId = ch.id) }
         }
     }
+
+    // --- Backup stream & automatic failover (the player asks when a stream fails or keeps freezing) ---
+
+    /** Alternate links for the playing channel: its backup first, then the sources merged into it (and their backups). */
+    private var failoverAlts: List<Pair<String, org.imdtv.iptvtv.data.source.Drm?>> = emptyList()
+
+    private suspend fun armFailover(ch: ChannelEntity) {
+        val alts = ArrayList<Pair<String, org.imdtv.iptvtv.data.source.Drm?>>()
+        ch.backupUrl?.takeIf { it.isNotBlank() }?.let { alts += it to ch.drm() }
+        if (ch.mergeHead) org.imdtv.iptvtv.data.repo.ChannelMerge.members(c.db.channelDao(), ch).forEach { m ->
+            alts += m.streamUrl to m.drm()
+            m.backupUrl?.takeIf { it.isNotBlank() }?.let { alts += it to m.drm() }
+        }
+        failoverAlts = alts.distinctBy { it.first }
+    }
+
+    /** The player's failover hook (main thread): play the next alternate; true = taken over. */
+    private fun tryFailover(): Boolean {
+        val p = provider.value ?: return false
+        val current = player.playingUrl.value
+        val (url, drm) = failoverAlts.firstOrNull { it.first != current } ?: return false
+        c.recordings.prompt.value = org.imdtv.iptvtv.recording.Prompt.Notice("", res = R.string.live_failover_backup)
+        previewedUrl.value = url
+        player.play(url, p.userAgent, p.login(), drm = drm)
+        return true
+    }
+
+    /** Backup stream… in the player menu; blank removes it. */
+    fun setBackupUrl(ch: ChannelEntity, url: String?) {
+        viewModelScope.launch {
+            c.db.channelDao().setBackupUrl(ch.id, url?.trim()?.takeIf { it.isNotEmpty() })
+            armFailover(ch)
+            c.recordings.prompt.value = org.imdtv.iptvtv.recording.Prompt.Notice("", res = R.string.live_backup_saved)
+        }
+    }
+
+    // --- Sleep timer & instant replay (the full-screen overlay's controls) ---
+
+    fun setSleepTimer(minutes: Int) = player.setSleepTimer(minutes)
+    fun startReplay(): Boolean = player.startReplay()
+    fun backToLive() = player.backToLive()
 
     /** Recently watched channels of the active playlist, newest first (spec §4.2). */
     val recents: StateFlow<List<ChannelEntity>> = providerId.flatMapLatest { c.db.recentDao().observe(it) }
@@ -443,6 +490,7 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
 
     /** A Recents card: play it and select its category, so Up/Down then zaps there and Back lands on it in the guide. */
     fun switchTo(ch: ChannelEntity) {
+        if (c.pin.requireCategory(ch.categoryId, categoryName(ch.categoryId)) { switchTo(ch) }) return
         rail.value?.map { it.entry }?.find { it is RailEntry.Provider && it.category.id == ch.categoryId }?.let { select(it) }
         focused.value = ch
         preview(ch)
@@ -451,6 +499,7 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Launch on the last channel full screen: select its category and focus it so Back lands on it in the guide. */
     fun startOn(ch: ChannelEntity) {
+        if (c.pin.requireCategory(ch.categoryId, categoryName(ch.categoryId)) { startOn(ch) }) return
         focused.value = ch
         preview(ch)
         watched(ch)
@@ -459,6 +508,9 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
                 .find { it is RailEntry.Provider && it.category.id == ch.categoryId }?.let { select(it) }
         }
     }
+
+    private fun categoryName(id: Long?): String =
+        rail.value?.mapNotNull { (it.entry as? RailEntry.Provider)?.category }?.find { it.id == id }?.name.orEmpty()
 
     // --- Long-press menu actions (spec §4.3) ---
 

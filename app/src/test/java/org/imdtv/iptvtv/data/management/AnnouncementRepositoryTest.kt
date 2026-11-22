@@ -16,6 +16,10 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
+// Robolectric, not plain JUnit: DataStore 1.3 replaces its file with Files.move only when Build.VERSION.SDK_INT >= 26.
+// The stub android.jar reports 0, sending plain JUnit tests down the File.renameTo branch, which cannot replace an
+// existing file on a Windows host. Robolectric reports a real SDK level, matching every device (minSdk 26).
+@org.junit.runner.RunWith(org.robolectric.RobolectricTestRunner::class)
 class AnnouncementRepositoryTest {
     @get:Rule val tmp = TemporaryFolder()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())

@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.imdtv.iptvtv.data.catalogue.cleaned
@@ -242,6 +243,13 @@ class VodViewModel(private val app: Application) : AndroidViewModel(app) {
      * the picture height once known, and where it's left (see WatchProgress).
      */
     fun play(url: String, item: VodItem? = null, episode: String = "", startMs: Long = 0) {
+        // Parental controls: playing into a locked category asks for the PIN first.
+        if (item != null && c.pin.requireCategory(item.categoryId, categoryName(item.categoryId)) { play(url, item, episode, startMs) }) return
+        cancelNext()
+        playingItem = item
+        playingEpisode = episode
+        playingUrl = url
+        player.channelLabel = item?.name
         player.play(url, provider.value?.userAgent, provider.value?.login(), vod = true, startMs = startMs)
         learn?.cancel()
         if (item == null) return
@@ -253,6 +261,60 @@ class VodViewModel(private val app: Application) : AndroidViewModel(app) {
             if (learnedHeights.value[key] != h) { heightPrefs.edit().putInt(key, h).apply(); learnedHeights.value = learnedHeights.value + (key to h) }
         }
     }
+
+    private fun categoryName(id: Long?): String = categories.value.find { it.category.id == id }?.category?.name.orEmpty()
+
+    // --- Autoplay next episode (Playback › Autoplay next episode): a 10-second countdown after the finale of an episode ---
+
+    /** The countdown on screen: [secondsLeft] to go, [episode] starts when it reaches 0. */
+    data class NextUp(val title: String, val secondsLeft: Int, val episode: org.imdtv.iptvtv.data.model.Episode)
+    val nextUp = MutableStateFlow<NextUp?>(null)
+    private var nextJob: kotlinx.coroutines.Job? = null
+    private var playingItem: VodItem? = null
+    private var playingEpisode: String = ""
+    private var playingUrl: String? = null
+
+    init {
+        // Parental controls: a locked category opened from any theme reverts and asks for the PIN.
+        viewModelScope.launch {
+            gridCategory.collect { cat ->
+                if (cat != null && c.pin.categoryLocked(cat.id)) {
+                    gridCategory.value = null
+                    c.pin.requireCategory(cat.id, cat.name) { gridCategory.value = cat }
+                }
+            }
+        }
+        viewModelScope.launch {
+            player.ended.collect {
+                val item = playingItem ?: return@collect
+                // Something else plays now (catch-up, a live channel): this end is not the episode's.
+                if (player.playingUrl.value != playingUrl) return@collect
+                if (item.kind != Kind.SERIES || !c.settings.settings.first().autoplayNext) return@collect
+                val next = org.imdtv.iptvtv.player.episodeAfter(details.value[item.id]?.episodes.orEmpty(), playingEpisode) ?: return@collect
+                nextJob?.cancel()
+                nextJob = viewModelScope.launch {
+                    for (s in 10 downTo 1) {
+                        nextUp.value = NextUp(next.title.ifEmpty { "S${next.season} E${next.number}" }, s, next)
+                        kotlinx.coroutines.delay(1_000)
+                    }
+                    nextUp.value = null
+                    play(next.streamUrl, item, next.remoteId)
+                }
+            }
+        }
+        // Leaving the player (Back, Home, a live zap) stops the countdown.
+        viewModelScope.launch { player.playingUrl.collect { if (it == null) cancelNext() } }
+    }
+
+    /** "Play now" on the countdown. */
+    fun playNextNow() {
+        val n = nextUp.value ?: return
+        val item = playingItem ?: return
+        cancelNext()
+        play(n.episode.streamUrl, item, n.episode.remoteId)
+    }
+
+    fun cancelNext() { nextJob?.cancel(); nextJob = null; nextUp.value = null }
 
     companion object {
         const val ROW_LIMIT = 30

@@ -243,6 +243,36 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                         SwitchRow(stringResource(R.string.set_b_catch_up), stringResource(R.string.set_b_catch_up_expl), s.catchUpOn) { on -> vm.update { it.copy(catchUpOn = on) } }
                         val subs = ChannelPage.SUBTITLES
                         SettingRow(stringResource(subs.titleRes), stringResource(subs.explanationRes), "›", Modifier.focusRequester(openers.getValue(subs))) { park(); page = subs }
+                        // Sleep timer: off by default; a choice arms it for every viewing session.
+                        ChoiceRow(stringResource(R.string.set_b_sleep_timer), stringResource(R.string.set_b_sleep_timer_expl),
+                            org.imdtv.iptvtv.data.settings.SLEEP_TIMER_MINUTES, s.sleepTimerMin,
+                            { if (it == 0) stringResource(R.string.set_b_sleep_off) else stringResource(R.string.set_b_sleep_min, it) }, default = AppSettings().sleepTimerMin) { min ->
+                            vm.update { it.copy(sleepTimerMin = min) }
+                        }
+                        ChoiceRow(stringResource(R.string.set_b_audio_language), stringResource(R.string.set_b_audio_language_expl),
+                            listOf<String?>(null) + org.imdtv.iptvtv.data.settings.SUBTITLE_LANGUAGES.sortedBy { java.util.Locale(it).displayLanguage },
+                            s.audioLanguage, { l -> l?.let { java.util.Locale(it).displayLanguage } ?: stringResource(R.string.set_b_audio_auto) }, default = AppSettings().audioLanguage) { l ->
+                            vm.update { it.copy(audioLanguage = l) }
+                        }
+                        ChoiceRow(stringResource(R.string.set_b_connection_profile), stringResource(R.string.set_b_connection_profile_expl),
+                            org.imdtv.iptvtv.data.settings.ConnectionProfile.entries.toList(), s.connectionProfile,
+                            { stringResource(it.labelRes) }, default = AppSettings().connectionProfile) { p -> vm.update { it.copy(connectionProfile = p) } }
+                        SwitchRow(stringResource(R.string.set_b_autoplay_next), stringResource(R.string.set_b_autoplay_next_expl), s.autoplayNext) { on ->
+                            vm.update { it.copy(autoplayNext = on) }
+                        }
+                        SwitchRow(stringResource(R.string.set_b_instant_replay), stringResource(R.string.set_b_instant_replay_expl), s.instantReplayOn) { on ->
+                            vm.update { it.copy(instantReplayOn = on) }
+                        }
+                        SwitchRow(stringResource(R.string.set_b_match_refresh), stringResource(R.string.set_b_match_refresh_expl), s.matchRefreshRate) { on ->
+                            vm.update { it.copy(matchRefreshRate = on) }
+                        }
+                        if (org.imdtv.iptvtv.BuildConfig.MANAGED) SwitchRow(stringResource(R.string.set_b_diagnostics), stringResource(R.string.set_b_diagnostics_expl), s.diagnosticsOn) { on ->
+                            vm.update { it.copy(diagnosticsOn = on) }
+                        }
+                        val parental = ChannelPage.PARENTAL
+                        SettingRow(stringResource(parental.titleRes), stringResource(parental.explanationRes),
+                            (if (s.parentalPin.isNotEmpty()) stringResource(R.string.set_b_pin_set_value) else stringResource(R.string.set_b_pin_none)) + " ›",
+                            Modifier.focusRequester(openers.getValue(parental))) { park(); page = parental }
                     }
                     SettingsGroup.APPEARANCE -> PageRows(listOf(ChannelPage.APPEARANCE_APP, ChannelPage.APPEARANCE_LIVE, ChannelPage.APPEARANCE_VOD), vm, rowsFocus, openers) { park(); page = it }
                     SettingsGroup.BEHAVIOUR -> {
@@ -305,6 +335,16 @@ fun SubtitleRows(vm: SettingsViewModel, first: FocusRequester) {
     SwitchRow(stringResource(R.string.set_b_live_tv), stringResource(R.string.set_b_live_tv_expl), s.liveSubtitlesOn) { on ->
         vm.update { it.copy(liveSubtitlesOn = on) }
     }
+    // Appearance applies to both movies & series and live captions (size, height above the bottom, background box).
+    ChoiceRow(stringResource(R.string.set_b_sub_size), stringResource(R.string.set_b_sub_size_expl),
+        org.imdtv.iptvtv.data.settings.SubtitleSize.entries.toList(), s.subtitleSize, { stringResource(it.labelRes) },
+        default = AppSettings().subtitleSize) { v -> vm.update { it.copy(subtitleSize = v) } }
+    ChoiceRow(stringResource(R.string.set_b_sub_position), stringResource(R.string.set_b_sub_position_expl),
+        org.imdtv.iptvtv.data.settings.SubtitlePosition.entries.toList(), s.subtitlePosition, { stringResource(it.labelRes) },
+        default = AppSettings().subtitlePosition) { v -> vm.update { it.copy(subtitlePosition = v) } }
+    ChoiceRow(stringResource(R.string.set_b_sub_background), stringResource(R.string.set_b_sub_background_expl),
+        org.imdtv.iptvtv.data.settings.SubtitleBackground.entries.toList(), s.subtitleBackground, { stringResource(it.labelRes) },
+        default = AppSettings().subtitleBackground) { v -> vm.update { it.copy(subtitleBackground = v) } }
 }
 
 /** A setting: name, one-line grey explanation, and its current value on the right. */

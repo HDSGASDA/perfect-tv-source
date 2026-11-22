@@ -212,6 +212,27 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun setHidden(cat: CategoryEntity, hidden: Boolean) { viewModelScope.launch { c.db.categoryDao().setHidden(cat.id, hidden) } }
+
+    // --- Parental controls (Playback › Parental controls) ---
+
+    /** Every category of the active playlist (live, movies and series), for the locked-categories picker. */
+    val lockableCategories: StateFlow<List<CategoryEntity>> = perProvider(emptyList()) { p ->
+        val strip = c.db.providerDao().observe(p).map { parseStripList(it?.categoryStrip.orEmpty()) }
+        combine(c.db.categoryDao().observeAllKinds(p), strip) { cats, s ->
+            cats.map { it.cleaned(s) }.sortedWith(compareBy({ it.kind }, { it.name.lowercase() }))
+        }
+    }
+
+    fun setCategoryLocked(id: Long, locked: Boolean) {
+        viewModelScope.launch { c.settings.update { it.copy(lockedCategories = if (locked) it.lockedCategories + id else it.lockedCategories - id) } }
+    }
+
+    /** Empty removes the PIN and unlocks everything (the gate relocks on the change). */
+    fun setParentalPin(pin: String) {
+        viewModelScope.launch {
+            c.settings.update { if (pin.isEmpty()) it.copy(parentalPin = "", lockedCategories = emptySet(), lockSettings = false) else it.copy(parentalPin = pin) }
+        }
+    }
     fun channelsIn(categoryId: Long) = c.db.channelDao().observeAllByCategory(categoryId)
     fun mergeCounts(categoryId: Long) = c.db.channelDao().observeMergeCounts(categoryId).map { l -> l.associate { it.id to it.n } }
     suspend fun mergedMembers(head: org.imdtv.iptvtv.data.db.ChannelEntity) = org.imdtv.iptvtv.data.repo.ChannelMerge.members(c.db.channelDao(), head)

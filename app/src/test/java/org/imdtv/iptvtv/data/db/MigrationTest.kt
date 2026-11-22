@@ -11,7 +11,10 @@ import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class MigrationTest {
-    private val DB = "migration-test"
+    // Absolute path, not a bare name: Room 2.8's SupportSQLiteDriver compares the requested path to the configured
+    // name by splitting on '/', which never matches a Windows '\' path. An absolute name equals the requested path
+    // verbatim on every OS (Context.getDatabasePath returns absolute names unchanged).
+    private val DB = InstrumentationRegistry.getInstrumentation().targetContext.getDatabasePath("migration-test").absolutePath
 
     @get:Rule
     val helper = MigrationTestHelper(InstrumentationRegistry.getInstrumentation(), AppDatabase::class.java)

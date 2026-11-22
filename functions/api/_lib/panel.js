@@ -178,10 +178,48 @@ export async function route(request, env, path) {
       const msg = part.match(/^messages\/([a-f0-9]{64})$/);
       if (msg && method === "PUT") { const b=await bodyJson(request),exp=b.expiresAt??null; if(typeof b.active!=="boolean")return fail("Invalid message state"); if(b.active && exp!==null && (!Number.isInteger(exp)||exp<=now()||exp>now()+366*86400))return fail("Expiration must be in the future and within one year"); if(b.active){const c=await env.DB.prepare("SELECT COUNT(*) n FROM messages WHERE active=1 AND (expires_at IS NULL OR expires_at>?) AND id<>?").bind(now(),msg[1]).first();if(c.n>=20)return fail("At most 20 messages may be active; deactivate an existing message first",409);} const r=await env.DB.prepare("UPDATE messages SET active=?,expires_at=? WHERE id=?").bind(b.active?1:0,exp,msg[1]).run();return r.meta.changes?new Response(null,{status:204}):fail("Message not found",404); }
       if (part === "releases" && method === "GET") { const {results}=await env.DB.prepare("SELECT * FROM releases ORDER BY version_code DESC LIMIT 500").all(); const budget=await env.DB.prepare("SELECT used_bytes FROM r2_storage_budget WHERE id=1").first(); return json({releases:results.map(r=>releaseFromRow(r)),storage:{usedBytes:budget?.used_bytes||0,limitBytes:MAX_APK_STORAGE_BYTES}}); }
+      if (part === "diagnostics" && method === "GET") {
+        const { results } = await env.DB.prepare("SELECT received_at,version_name,device,android,channels_json FROM diagnostics ORDER BY received_at DESC,id DESC LIMIT 2000").all();
+        const channels = new Map(), devices = new Map();
+        for (const row of results) {
+          let list; try { list = JSON.parse(row.channels_json); } catch { continue; }
+          for (const ch of list) {
+            const agg = channels.get(ch.name) || { name: ch.name, seconds: 0, stalls: 0, underruns: 0, droppedFrames: 0, errors: 0, reports: 0 };
+            agg.seconds += ch.seconds; agg.stalls += ch.stalls; agg.underruns += ch.underruns; agg.droppedFrames += ch.droppedFrames; agg.errors += ch.errors; agg.reports += 1;
+            channels.set(ch.name, agg);
+          }
+          const key = `${row.device} (Android ${row.android})`;
+          const dev = devices.get(key) || { device: row.device, android: row.android, reports: 0, lastSeenAt: 0, versionName: row.version_name };
+          dev.reports += 1; dev.lastSeenAt = Math.max(dev.lastSeenAt, row.received_at); devices.set(key, dev);
+        }
+        return json({
+          reports: results.length, lastReceivedAt: results[0]?.received_at || null,
+          channels: [...channels.values()].sort((a, b) => (b.stalls + b.errors) - (a.stalls + a.errors) || b.seconds - a.seconds).slice(0, 500),
+          devices: [...devices.values()].sort((a, b) => b.lastSeenAt - a.lastSeenAt).slice(0, 100),
+        });
+      }
       if (part === "releases" && method === "POST") return await upload(request,env);
       const action=part.match(/^releases\/(\d+)\/(publish|withdraw)$/);
       if(action&&method==="POST") { const code=Number(action[1]); if(action[2]==="withdraw"){const r=await env.DB.prepare("UPDATE releases SET status='withdrawn' WHERE version_code=? AND status IN ('draft','published')").bind(code).run();return r.meta.changes?new Response(null,{status:204}):fail("Release does not exist or is already withdrawn",409);} const rel=await env.DB.prepare("SELECT status FROM releases WHERE version_code=?").bind(code).first();if(!rel)return fail("Release not found",404);if(rel.status!=="draft")return fail("Only a draft can be published; withdrawn releases cannot be republished",409);const highest=await env.DB.prepare("SELECT COALESCE(MAX(version_code),0) n FROM releases WHERE published_at IS NOT NULL").first();if(code<=highest.n)return fail("Publishing must increase the highest ever published version code",409);await env.DB.prepare("UPDATE releases SET status='published',published_at=? WHERE version_code=?").bind(now(),code).run();return new Response(null,{status:204}); }
       return fail("Route not found",404);
+    }
+    if (path === "api/app/diagnostics" && method === "POST") {
+      // Opt-in anonymous playback totals from managed apps. Light per-IP limit; rows are pruned to the newest 5000.
+      const ip = request.headers.get("cf-connecting-ip") || "unknown";
+      const bucket = await digest(`diag:${ip}`);
+      const lim = await env.DB.prepare("INSERT INTO login_limits(bucket,window_start,attempts) VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=CASE WHEN window_start<=? THEN 1 ELSE attempts+1 END,window_start=CASE WHEN window_start<=? THEN excluded.window_start ELSE window_start END RETURNING attempts").bind(bucket, now(), now() - 3600, now() - 3600).first();
+      if (lim.attempts > 60) return fail("Too many reports; try again later", 429);
+      const b = await bodyJson(request);
+      const okInt = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
+      if (!okInt(b.versionCode, 2100000000) || b.versionCode < 1 || typeof b.versionName !== "string" || !b.versionName || b.versionName.length > 100 || typeof b.device !== "string" || b.device.length > 80 || !okInt(b.android, 100) || !Array.isArray(b.channels) || b.channels.length < 1 || b.channels.length > 200) return fail("Invalid diagnostics payload");
+      for (const ch of b.channels) {
+        if (!ch || typeof ch.name !== "string" || !ch.name.trim() || ch.name.length > 120 || /[\x00-\x1f\x7f]/.test(ch.name) || !okInt(ch.seconds, 31536000) || !okInt(ch.stalls, 1000000) || !okInt(ch.underruns, 10000000) || !okInt(ch.droppedFrames, 100000000) || !okInt(ch.errors, 1000000)) return fail("Invalid channel totals");
+        ch.name = ch.name.trim();
+      }
+      const channels = b.channels.map(ch => ({ name: ch.name, seconds: ch.seconds, stalls: ch.stalls, underruns: ch.underruns, droppedFrames: ch.droppedFrames, errors: ch.errors }));
+      await env.DB.prepare("INSERT INTO diagnostics(received_at,version_code,version_name,device,android,channels_json) VALUES(?,?,?,?,?,?)").bind(now(), b.versionCode, b.versionName, b.device, b.android, JSON.stringify(channels)).run();
+      await env.DB.prepare("DELETE FROM diagnostics WHERE id NOT IN (SELECT id FROM diagnostics ORDER BY id DESC LIMIT 5000)").run();
+      return new Response(null, { status: 204 });
     }
     if (path === "api/app/config" && method === "GET") return json(await getConfig(env),200,{"cache-control":"public, max-age=60, stale-while-revalidate=300"});
     if (path === "api/app/messages" && method === "GET") { const {results}=await env.DB.prepare("SELECT id,title,body FROM messages WHERE active=1 AND (expires_at IS NULL OR expires_at>?) ORDER BY created_at DESC,id DESC LIMIT 20").bind(now()).all();return json({messages:results},200,{"cache-control":"public, max-age=30, stale-while-revalidate=60"}); }

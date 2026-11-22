@@ -51,9 +51,10 @@ private val OK = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 /** Full-screen playback. Live ([liveVm] set) adds the info overlay (OK opens, Back closes, 5s auto-hide) and Up/Down (or Left/Right) zapping. */
 @Composable
 fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = null, onGuide: () -> Unit = {}, showClock: Boolean = false,
-                 aspect: VideoAspect = VideoAspect.AUTO) {
+                 aspect: VideoAspect = VideoAspect.AUTO, vodVm: org.imdtv.iptvtv.ui.vod.VodViewModel? = null, matchRefreshRate: Boolean = false) {
     val live = liveVm != null
     val context = androidx.compose.ui.platform.LocalContext.current
+    val replaying by player.replaying.collectAsState()
     val zapLeftRight = liveVm?.settings?.collectAsState()?.value?.zapLeftRight == true
     val focused = liveVm?.focused?.collectAsState()?.value
     val name = focused?.displayName(liveVm.strip.collectAsState().value) ?: title
@@ -70,6 +71,15 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
     val keys = remember { FocusRequester() }
     val leftHeld = remember { BooleanArray(1) }
     BackHandler(enabled = overlay) { overlay = false }
+    // Instant replay: Back leaves the buffer and rejoins the live edge (before the screen's own Back).
+    BackHandler(enabled = replaying && !overlay) { liveVm?.backToLive() }
+    // Match TV refresh rate: follow the stream's frame rate while full screen; the box's own mode returns on leaving.
+    val activity = remember(context) { generateSequence(context) { (it as? android.content.ContextWrapper)?.baseContext }.filterIsInstance<android.app.Activity>().firstOrNull() }
+    val frameRate = player.formats.collectAsState().value.frameRate
+    LaunchedEffect(matchRefreshRate, frameRate) { activity?.window?.let { org.imdtv.iptvtv.player.RefreshRate.apply(it, frameRate, matchRefreshRate) } }
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { activity?.window?.let(org.imdtv.iptvtv.player.RefreshRate::restore) } }
+    // Back from replay to live: the zap keys take focus again (the movie controller had it).
+    LaunchedEffect(replaying) { if (!replaying && live) { withFrameNanos { }; runCatching { keys.requestFocus() } } }
     LaunchedEffect(overlay, lastKey, menuOpen) {
         if (overlay) { if (!menuOpen) { delay(5_000); overlay = false } }
         else if (live) { withFrameNanos { }; runCatching { keys.requestFocus() } }
@@ -88,18 +98,27 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
                 player.attach(it)
                 if (live) it.isFocusable = false else it.requestFocus()
             } },
-            update = { it.resizeMode = when (aspect) {
-                VideoAspect.AUTO -> AspectRatioFrameLayout.RESIZE_MODE_FIT
-                VideoAspect.FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                else -> AspectRatioFrameLayout.RESIZE_MODE_FILL
-            } },
+            update = {
+                it.resizeMode = when (aspect) {
+                    VideoAspect.AUTO -> AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    VideoAspect.FILL -> AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                    else -> AspectRatioFrameLayout.RESIZE_MODE_FILL
+                }
+                // Instant replay swaps the live stream for the seekable buffer: movie controls while it shows.
+                val controller = !live || replaying
+                if (it.useController != controller) {
+                    it.useController = controller
+                    if (controller) { insetControls(it); it.setShowSubtitleButton(true); keepFocusWhenControlsHide(it); it.requestFocus() }
+                    else it.isFocusable = false
+                }
+            },
             onRelease = { player.detach(it) },
             modifier = if (box == null) Modifier.fillMaxSize() else Modifier.align(Alignment.Center).fillMaxHeight().aspectRatio(box, matchHeightConstraintsFirst = true),
         )
         if (liveVm != null) {
             // Key target while the overlay is closed. OK opens on key-up, so the same press can't also click the TV guide card.
             Box(Modifier.fillMaxSize().focusRequester(keys).focusable().onKeyEvent { e ->
-                if (overlay) return@onKeyEvent false
+                if (overlay || replaying) return@onKeyEvent false
                 when {
                     e.key in OK -> { if (e.type == KeyEventType.KeyUp) overlay = true; true }
                     // Catch-up channel: Left acts on key-up, and held it jumps 30 s back into catch-up of the programme on now.
@@ -121,6 +140,31 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
         }
         if (player.buffering.collectAsState().value && error == null) Spinner(Modifier.align(Alignment.Center), size = 40.dp)
         if (showClock) PlayerClock(Modifier.align(Alignment.TopEnd).padding(top = 27.dp, end = 48.dp))
+        // Autoplay next episode: a 10-second countdown with Play now / Cancel (Playback › Autoplay next episode).
+        val nextUp = vodVm?.nextUp?.collectAsState()?.value
+        BackHandler(enabled = nextUp != null) { vodVm?.cancelNext() }
+        if (nextUp != null && vodVm != null) {
+            val playNowFocus = remember { FocusRequester() }
+            LaunchedEffect(Unit) { withFrameNanos { }; runCatching { playNowFocus.requestFocus() } }
+            androidx.compose.foundation.layout.Column(
+                Modifier.align(Alignment.BottomEnd).padding(end = 48.dp, bottom = 40.dp)
+                    .background(Color(0xE6101A3A), RoundedCornerShape(12.dp)).padding(20.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp),
+            ) {
+                Text(stringResource(R.string.vod_next_up, nextUp.title), color = Color.White, fontSize = 16.sp)
+                Text(stringResource(R.string.vod_next_in, nextUp.secondsLeft), color = Color(0xFFB9C2D8), fontSize = 13.sp)
+                androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                    FocusBox(onClick = { vodVm.playNextNow() }, modifier = Modifier.focusRequester(playNowFocus)) { f ->
+                        Text(stringResource(R.string.vod_next_now), color = if (f) Color.Black else Color.White, fontSize = 14.sp,
+                            modifier = Modifier.background(if (f) Color.White else Color(0x33FFFFFF), RoundedCornerShape(8.dp)).padding(horizontal = 18.dp, vertical = 9.dp))
+                    }
+                    FocusBox(onClick = { vodVm.cancelNext() }) { f ->
+                        Text(stringResource(R.string.live_cancel), color = if (f) Color.Black else Color.White, fontSize = 14.sp,
+                            modifier = Modifier.background(if (f) Color.White else Color(0x33FFFFFF), RoundedCornerShape(8.dp)).padding(horizontal = 18.dp, vertical = 9.dp))
+                    }
+                }
+            }
+        }
         error?.let {
             androidx.compose.foundation.layout.Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(it, color = Color.White, modifier = Modifier.background(Color(0xCC000000)).padding(24.dp))

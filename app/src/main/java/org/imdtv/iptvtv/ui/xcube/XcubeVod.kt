@@ -50,7 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Icon
 import androidx.tv.material3.Text
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import org.imdtv.iptvtv.R
 import org.imdtv.iptvtv.ui.FocusBox
 import org.imdtv.iptvtv.ui.vod.Poster

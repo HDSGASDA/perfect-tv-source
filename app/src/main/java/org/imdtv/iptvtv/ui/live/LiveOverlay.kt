@@ -132,6 +132,10 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
             Box(Modifier.padding(top = 14.dp).fillMaxWidth().height(2.dp).background(Color(0x33FFFFFF))) {
                 if (progress != null) Box(Modifier.fillMaxHeight().fillMaxWidth(progress).background(Color.White))
             }
+            // Live pause & instant replay state (read here, in the composable scope; the LazyRow list below is not one).
+            val replaying by vm.player.replaying.collectAsState()
+            val replayReady by vm.player.replayReady.collectAsState()
+            val instantReplayOn = vm.settings.collectAsState().value.instantReplayOn
             LazyRow(
                 Modifier.padding(top = 14.dp, bottom = 24.dp).height(78.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -149,6 +153,15 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
                     OverlayCard(onClick = { menus.menu = GuideMenu.Player(ch) }) { f ->
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Text(stringResource(R.string.live_overlay_settings), fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = if (f) LocalTheme.current.colors.onFocus else Color.White)
+                        }
+                    }
+                }
+                // Live pause & instant replay: pause the live channel into the rolling buffer, or rejoin the live edge.
+                if (instantReplayOn && (replaying || replayReady)) item(key = "replay") {
+                    OverlayCard(onClick = { if (replaying) vm.backToLive() else vm.startReplay() }) { f ->
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text(stringResource(if (replaying) R.string.live_overlay_back_live else R.string.live_overlay_pause_live),
+                                fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = if (f) LocalTheme.current.colors.onFocus else Color.White)
                         }
                     }
                 }

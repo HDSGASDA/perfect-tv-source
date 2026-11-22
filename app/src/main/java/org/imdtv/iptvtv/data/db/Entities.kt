@@ -110,6 +110,8 @@ data class ChannelEntity(
     @ColumnInfo(defaultValue = "0") val mergedAuto: Boolean = false,
     /** Other channels are merged into this one: its name is shown without quality tags (HD, 4K…). */
     @ColumnInfo(defaultValue = "0") val mergeHead: Boolean = false,
+    /** An alternate URL for the same channel; played automatically when the main one fails or keeps freezing. */
+    val backupUrl: String? = null,
 ) {
     fun drm(): org.imdtv.iptvtv.data.source.Drm? = drmType?.let { org.imdtv.iptvtv.data.source.Drm(it, drmKey) }
 }

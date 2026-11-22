@@ -25,6 +25,13 @@ fun resumeAt(row: ProgressEntity?): Long = row?.takeIf { !it.completed }?.positi
 /** The episode a series' main button plays: [resume] true = carry on from [startMs]. */
 data class NextEpisode(val episode: Episode, val startMs: Long, val resume: Boolean)
 
+/** The episode after [remoteId] in airing order (season, number); null after the finale or when it isn't listed. */
+fun episodeAfter(episodes: List<Episode>, remoteId: String): Episode? {
+    val eps = episodes.sortedWith(compareBy({ it.season }, { it.number }))
+    val i = eps.indexOfFirst { it.remoteId == remoteId }
+    return if (i < 0) null else eps.getOrNull(i + 1)
+}
+
 /**
  * The last episode in progress, else the one after the last watched (back to the first after the finale), else the first.
  * [rows] are this series' progress rows; rows of episodes no longer listed are ignored.

@@ -4,8 +4,10 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.imdtv.iptvtv.BuildConfig
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -43,6 +45,12 @@ data class PanelConfig(val revision: Long, val servers: List<StreamingServer>, v
 data class PanelMessage(val id: String, val title: String, val body: String)
 @Serializable
 private data class MessageEnvelope(val messages: List<PanelMessage> = emptyList())
+
+/** Opt-in playback diagnostics (Playback › Send playback diagnostics): anonymous per-channel totals, no account data. */
+@Serializable
+data class ChannelDiagnostics(val name: String, val seconds: Long, val stalls: Int, val underruns: Int, val droppedFrames: Int, val errors: Int)
+@Serializable
+data class DiagnosticsPayload(val versionCode: Int, val versionName: String, val device: String, val android: Int, val channels: List<ChannelDiagnostics>)
 
 /** Public broadcast feed. Never attach provider credentials, hardware identifiers or an embedded administrator key. */
 class PanelClient(
@@ -95,6 +103,16 @@ class PanelClient(
                 require(it.title.isNotBlank() && it.title.length <= 120) { "Invalid message title" }
                 require(it.body.isNotBlank() && it.body.length <= 4000) { "Invalid message body" }
             }
+        }
+    }
+
+    /** Uploads one batch of playback totals; throws IOException on any failure so the worker keeps the batch. */
+    fun diagnostics(payload: DiagnosticsPayload) {
+        val url = checkedUrl("${baseUrl.trimEnd('/')}/api/app/diagnostics")
+        val body = json.encodeToString(DiagnosticsPayload.serializer(), payload)
+            .toRequestBody("application/json; charset=utf-8".toMediaType())
+        http.newCall(Request.Builder().url(url).post(body).build()).execute().use { r ->
+            if (!r.isSuccessful) throw IOException("Panel returned HTTP ${r.code}")
         }
     }
 
