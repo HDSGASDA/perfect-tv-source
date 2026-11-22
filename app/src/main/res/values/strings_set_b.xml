@@ -230,6 +230,7 @@
     <string name="set_b_install_error">error %1$d</string>
     <string name="set_b_update_available">Perfect TV %1$s is available</string>
     <string name="set_b_update_ready">A new version of Perfect TV is ready to install.</string>
+    <string name="set_b_release_notes">Release notes</string>
     <string name="set_b_hide">Hide</string>
     <string name="set_b_try_again">Try again</string>
     <string name="set_b_update_now">Update now</string>

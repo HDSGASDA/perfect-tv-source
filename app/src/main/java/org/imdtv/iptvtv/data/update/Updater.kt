@@ -17,6 +17,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -30,13 +31,13 @@ import java.io.IOException
 
 private const val RELEASES = "https://api.github.com/repos/HDSGASDA/app-perfect-tv/releases"
 private const val APK_NAME = "imd-tv.apk"
-private const val CHECK_EVERY_MS = 60 * 60 * 1000L
+private const val CHECK_EVERY_MS = 10_000L
 private const val LATER_MS = 24 * 60 * 60 * 1000L
 
 @Serializable private data class GhAsset(val name: String, @SerialName("browser_download_url") val url: String)
 @Serializable private data class GhRelease(@SerialName("tag_name") val tag: String, val body: String? = null, val assets: List<GhAsset> = emptyList())
 
-data class Update(val version: String, val apkUrl: String, val versionCode: Long? = null, val sha256: String? = null)
+data class Update(val version: String, val apkUrl: String, val versionCode: Long? = null, val sha256: String? = null, val notes: String = "")
 
 /** True when release tag [tag] ("v0.2.0") is a newer version than [current] ("0.1.0"). */
 fun isNewer(tag: String, current: String): Boolean {
@@ -62,8 +63,10 @@ class Updater(private val context: Context, private val http: OkHttpClient, priv
     val progress = MutableStateFlow<String?>(null)
     val error = MutableStateFlow<String?>(null)
     private val laterUntil = longPreferencesKey("update_later_until")
+    private val laterVersion = stringPreferencesKey("update_later_version")
+    private val lastCheckAt = longPreferencesKey("update_last_check_at")
     private val notesSeen = stringPreferencesKey("notes_seen")
-    @Volatile private var lastCheck = 0L
+    private val checkLock = kotlinx.coroutines.sync.Mutex()
     /** This version's release notes, shown once after an update; null when closed. */
     val whatsNew = MutableStateFlow<String?>(null)
 
@@ -94,35 +97,50 @@ class Updater(private val context: Context, private val http: OkHttpClient, priv
         prefs.edit { it[notesSeen] = BuildConfig.VERSION_NAME }
     }
 
-    /** Asks GitHub for the latest release; [manual] ignores the 1-hour spacing and "Later". Returns false on failure. */
-    suspend fun check(manual: Boolean = false): Boolean = withContext(Dispatchers.IO) {
-        if (!manual && System.currentTimeMillis() - lastCheck < CHECK_EVERY_MS) return@withContext true
-        val u = try {
-            if (BuildConfig.MANAGED) {
-                panel.release()?.takeIf { it.versionCode > BuildConfig.VERSION_CODE }?.let {
-                    Update(it.versionName, it.apkUrl, it.versionCode, it.sha256)
+    /** Checks the published release endpoint; automatic checks are spaced ten seconds apart and [manual] ignores that spacing and "Later". Returns false on failure. */
+    suspend fun check(manual: Boolean = false): Boolean = checkLock.withLock {
+        withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val last = prefs.data.first()[lastCheckAt] ?: 0L
+            if (!manual && now - last < CHECK_EVERY_MS) return@withContext true
+            val u = try {
+                if (BuildConfig.MANAGED) {
+                    panel.release()?.takeIf { it.versionCode > BuildConfig.VERSION_CODE }?.let {
+                        Update(it.versionName, it.apkUrl, it.versionCode, it.sha256, plainNotes(it.notes))
+                    }
+                } else {
+                    val release = release("latest")
+                    val apk = release.assets.find { it.name == APK_NAME }
+                    if (apk != null && isNewer(release.tag, BuildConfig.VERSION_NAME)) Update(release.tag.trimStart('v', 'V'), apk.url, notes = plainNotes(release.body.orEmpty())) else null
                 }
-            } else {
-                val release = release("latest")
-                val apk = release.assets.find { it.name == APK_NAME }
-                if (apk != null && isNewer(release.tag, BuildConfig.VERSION_NAME)) Update(release.tag.trimStart('v', 'V'), apk.url) else null
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.i("Updater", "Update check failed (${e.javaClass.simpleName})")
+                return@withContext false
             }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.i("Updater", "Update check failed (${e.javaClass.simpleName})")
-            return@withContext false
+            prefs.edit { it[lastCheckAt] = now }
+            available.value = u
+            if (u == null) prompt.value = false
+            val state = prefs.data.first()
+            val updateId = u?.let { it.versionCode?.toString() ?: it.version }
+            val laterId = state[laterVersion]
+            val laterExpired = System.currentTimeMillis() >= (state[laterUntil] ?: 0L)
+            // A dismissal applies only to the release that was on screen. A newly published
+            // release must open the prompt immediately, even if the previous release was deferred.
+            if (u != null && (manual || updateId != laterId || laterExpired)) prompt.value = true
+            true
         }
-        lastCheck = System.currentTimeMillis()
-        available.value = u
-        if (u == null) prompt.value = false
-        if (u != null && (manual || System.currentTimeMillis() >= (prefs.data.first()[laterUntil] ?: 0L))) prompt.value = true
-        true
     }
 
-    /** "Later" (or Back): the prompt stays closed for a day, then opens again on the next check. */
+    /** "Later" (or Back): the current release stays closed for a day. A newly published release is never hidden by an older dismissal. */
     suspend fun later() {
         prompt.value = false
-        prefs.edit { it[laterUntil] = System.currentTimeMillis() + LATER_MS }
+        available.value?.let { update ->
+            prefs.edit {
+                it[laterVersion] = update.versionCode?.toString() ?: update.version
+                it[laterUntil] = System.currentTimeMillis() + LATER_MS
+            }
+        }
     }
 
     private val installLock = kotlinx.coroutines.sync.Mutex()

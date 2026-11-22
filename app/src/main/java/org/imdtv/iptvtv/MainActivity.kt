@@ -88,6 +88,17 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         CatalogueSyncWorker.runOnLaunch(this)
         lifecycleScope.launch { (application as IptvApp).container.updater.checkWhatsNew() }
+        // Keep checking while the app remains visible. Automatic requests are spaced ten seconds apart,
+        // so a release published from the panel opens the update prompt promptly without a restart.
+        lifecycleScope.launch {
+            val updater = (application as IptvApp).container.updater
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                while (true) {
+                    updater.check()
+                    delay(10_000L)
+                }
+            }
+        }
         lifecycleScope.launch {
             val container = (application as IptvApp).container
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -117,12 +128,6 @@ class MainActivity : ComponentActivity() {
                         val ok = container.announcements.refresh()
                         delay(interval)
                         interval = if (ok) 10_000L else (interval * 2).coerceAtMost(5 * 60_000L)
-                    }
-                }
-                launch {
-                    while (true) {
-                        container.updater.check()
-                        delay(60 * 60_000L)
                     }
                 }
             }
@@ -314,8 +319,8 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         app.player.toForeground()
-        // TV boxes keep the app alive for days: check on every return to it, at most once an hour.
-        if (!BuildConfig.MANAGED) lifecycleScope.launch { (application as IptvApp).container.updater.check() }
+        // Check immediately whenever the app enters the foreground; the foreground loop checks again every ten seconds.
+        lifecycleScope.launch { (application as IptvApp).container.updater.check() }
         (application as IptvApp).container.sync.onForeground()
     }
 }

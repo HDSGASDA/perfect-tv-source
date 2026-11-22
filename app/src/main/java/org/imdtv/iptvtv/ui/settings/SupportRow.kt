@@ -51,24 +51,15 @@ import org.imdtv.iptvtv.R
 import org.imdtv.iptvtv.ui.MenuFrame
 import org.imdtv.iptvtv.ui.MenuItem
 
-const val SUPPORT_URL = "https://buymeacoffee.com/majorleeevil"
-const val SUPPORT_LABEL = "buymeacoffee.com/majorleeevil"
-const val WEBSITE_LABEL = "imd-tv.com"
-const val WEBSITE_URL = "https://$WEBSITE_LABEL/"
-const val SITE_LABEL = "majorleeevil.github.io/imd-tv"
-const val SITE_URL = "https://$SITE_LABEL/"
-const val CONTACT_EMAIL = "support@imd-tv.com"
+const val CONTACT_EMAIL = "admin@perfectiptv.co.uk"
 
-/** Settings › About: version, website, source, licence, contact, and the quiet Support Perfect TV entry. */
+/** Settings › About: version, licence, contact, and support diagnostics. */
 @Composable
 fun AboutRows(first: Modifier) {
     VersionRow(first)
-    QrRow(stringResource(R.string.set_b_website), stringResource(R.string.set_b_website_expl), WEBSITE_LABEL, R.drawable.website_qr, WEBSITE_LABEL)
-    QrRow(stringResource(R.string.set_b_source), stringResource(R.string.set_b_source_expl), SITE_LABEL, R.drawable.site_qr, SITE_LABEL)
     SettingRow(stringResource(R.string.set_b_licence), stringResource(R.string.set_b_licence_expl), "GPL-3.0") {}
     SettingRow(stringResource(R.string.set_b_contact), stringResource(R.string.set_b_contact_expl), CONTACT_EMAIL) {}
     SendLogsRow()
-    QrRow(stringResource(R.string.set_b_support), stringResource(R.string.set_b_support_expl), null, R.drawable.support_qr, SUPPORT_LABEL)
 }
 
 /** Version: OK opens the update prompt when there is one, else checks GitHub now. */
@@ -91,23 +82,6 @@ private fun VersionRow(first: Modifier) {
             checking = false
             result = if (!ok) msgCheckFailed else if (updater.available.value == null) msgLatest else null
         }
-    }
-}
-
-/** A row whose OK shows a QR code for [label] (a TV has no browser) with the address written out. Never prompts. */
-@Composable
-private fun QrRow(title: String, explanation: String, value: String?, qr: Int, label: String) {
-    var open by remember { mutableStateOf(false) }
-    SettingRow(title, explanation, value) { open = true }
-    if (open) MenuFrame(title, onDismiss = { open = false }) { first ->
-        Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
-            // The QR is drawn at 1 px per module: scale without smoothing or phones can't read it.
-            Image(ImageBitmap.imageResource(qr), contentDescription = stringResource(R.string.set_b_qr_for, label), filterQuality = FilterQuality.None,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color.White).padding(12.dp).size(200.dp))
-        }
-        Text(stringResource(R.string.set_b_scan_visit, label), fontSize = 15.sp, color = Color.White, textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
-        MenuItem(stringResource(R.string.set_b_close), Modifier.focusRequester(first)) { open = false }
     }
 }
 

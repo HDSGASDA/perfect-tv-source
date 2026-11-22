@@ -50,6 +50,10 @@ fun UpdatePrompt(updater: Updater, background: CoroutineScope) {
         // No release notes here: they show once, after the update (What's new).
         val body = error ?: progress ?: stringResource(R.string.set_b_update_ready)
         Text(body, fontSize = 15.sp, color = Color.White, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp))
+        if (u.notes.isNotBlank()) {
+            Text(stringResource(R.string.set_b_release_notes), fontSize = 13.sp, color = Color.White.copy(alpha = .72f), modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp))
+            Text(u.notes, fontSize = 13.sp, color = Color.White.copy(alpha = .88f), maxLines = 4, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp))
+        }
         if (progress != null) MenuItem(stringResource(R.string.set_b_hide), Modifier.focusRequester(first)) { updater.prompt.value = false }
         else {
             MenuItem(if (error != null) stringResource(R.string.set_b_try_again) else stringResource(R.string.set_b_update_now), Modifier.focusRequester(first)) { background.launch { updater.install(u) } }
