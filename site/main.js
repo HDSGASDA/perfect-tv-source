@@ -1,4 +1,4 @@
-// IMD TV site: builds the section rail, highlights the section in view, reveals each section once. No tracking.
+// Perfect TV site: builds the section rail, highlights the section in view, reveals each section once. No tracking.
 (function () {
   document.documentElement.classList.remove('no-js');
   var sections = Array.prototype.slice.call(document.querySelectorAll('main section[data-name]'));

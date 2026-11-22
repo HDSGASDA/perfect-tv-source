@@ -5,7 +5,7 @@ export async function onRequestGet({ env }) {
   const headers = new Headers({
     "Content-Type": "application/vnd.android.package-archive",
     "Content-Disposition": 'attachment; filename="imd-tv-managed.apk"',
-    "Cache-Control": "public, max-age=300",
+    "Cache-Control": "public, max-age=300, s-maxage=3600, stale-while-revalidate=86400",
     "X-Content-Type-Options": "nosniff",
   });
   if (object.size != null) headers.set("Content-Length", String(object.size));

@@ -59,7 +59,7 @@ const val SITE_LABEL = "majorleeevil.github.io/imd-tv"
 const val SITE_URL = "https://$SITE_LABEL/"
 const val CONTACT_EMAIL = "support@imd-tv.com"
 
-/** Settings › About: version, website, source, licence, contact, and the quiet Support IMD TV entry. */
+/** Settings › About: version, website, source, licence, contact, and the quiet Support Perfect TV entry. */
 @Composable
 fun AboutRows(first: Modifier) {
     VersionRow(first)
@@ -136,7 +136,7 @@ fun SendLogsPage(extraSecrets: List<String> = emptyList(), onClose: () -> Unit) 
                 val c = app.container
                 val providers = c.db.providerDao().all()
                 val (prev, cur) = LogCollector.read(ctx)
-                val header = "IMD TV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}\n" +
+                val header = "Perfect TV ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n${Build.MANUFACTURER} ${Build.MODEL}, Android ${Build.VERSION.RELEASE}\n" +
                     "Theme: ${c.settings.settings.first().theme}\nPlaylists: ${providers.size} ${providers.map { it.type }}\n\n"
                 // Stalker passwords hold "serial\ndeviceId": each line is a secret.
                 val secrets = (providers.flatMap { listOfNotNull(it.username, it.password) } + extraSecrets).flatMap { it.lines() }

@@ -17,8 +17,8 @@ android {
         applicationId = "org.imdtv.iptvtv"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.6.0"
+        versionCode = 11
+        versionName = "0.6.1"
         buildConfigField("boolean", "MANAGED", "false")
         buildConfigField("String", "STREAMING_BASE_URL", "\"https://protect.securemy.network:443\"")
         buildConfigField("String", "PANEL_BASE_URL", "\"\"")
@@ -35,8 +35,8 @@ android {
         create("managed") {
             dimension = "distribution"
             applicationIdSuffix = ".managed"
-            versionCode = providers.gradleProperty("managedVersionCode").orElse("11").get().toInt().also { require(it > 0) }
-            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.0-managed.1").get()
+            versionCode = providers.gradleProperty("managedVersionCode").orElse("12").get().toInt().also { require(it > 0) }
+            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.1-managed.1").get()
             buildConfigField("boolean", "MANAGED", "true")
             buildConfigField("String", "PANEL_BASE_URL", "\"$panelUrl\"")
         }

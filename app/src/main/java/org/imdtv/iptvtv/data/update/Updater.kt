@@ -28,7 +28,7 @@ import org.imdtv.iptvtv.IptvApp
 import java.io.File
 import java.io.IOException
 
-private const val RELEASES = "https://api.github.com/repos/majorleeevil/imd-tv/releases"
+private const val RELEASES = "https://api.github.com/repos/HDSGASDA/app-perfect-tv/releases"
 private const val APK_NAME = "imd-tv.apk"
 private const val CHECK_EVERY_MS = 60 * 60 * 1000L
 private const val LATER_MS = 24 * 60 * 60 * 1000L
@@ -51,7 +51,7 @@ fun isNewer(tag: String, current: String): Boolean {
 
 /**
  * One-click updates from GitHub Releases: the latest release's imd-tv.apk goes to Android's installer, which asks
- * the user to confirm (and, the first time, to allow installs from IMD TV). Releases must keep the same signing key.
+ * the user to confirm (and, the first time, to allow installs from Perfect TV). Releases must keep the same signing key.
  */
 class Updater(private val context: Context, private val http: OkHttpClient, private val json: Json, private val prefs: DataStore<Preferences>) {
     private val panel by lazy { org.imdtv.iptvtv.data.management.PanelClient(http) }

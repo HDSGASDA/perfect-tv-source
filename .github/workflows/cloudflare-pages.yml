@@ -8,12 +8,15 @@ permissions:
   contents: read
 concurrency:
   group: cloudflare-pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: cloudflare/wrangler-action@v3
         name: Apply D1 migrations
         with:
