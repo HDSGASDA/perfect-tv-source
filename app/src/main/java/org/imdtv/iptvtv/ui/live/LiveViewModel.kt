@@ -329,6 +329,9 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
     private var previewJob: kotlinx.coroutines.Job? = null
 
     fun preview(ch: ChannelEntity) {
+        // Every play path ends here (autoplay on scroll, OK preview, zapping, number entry): a locked category asks
+        // for the PIN before any picture shows, not just when its rail entry is picked.
+        if (c.pin.requireCategory(ch.categoryId, categoryName(ch.categoryId)) { preview(ch) }) return
         previewed.value = ch
         player.channelLabel = ch.displayName(strip.value)
         previewJob?.cancel() // a latency check for the channel scrolled past stops here
@@ -403,6 +406,16 @@ class LiveViewModel(app: Application) : AndroidViewModel(app) {
     val recentProgrammes: StateFlow<Map<Long, List<GuideProgramme>>> =
         combine(recents, now, c.db.epgDao().observeGuideVersion()) { r, n, _ -> r to n }
             .mapLatest { (r, n) -> provider.value?.let { guide.programmes(it.id, r, n, n + 12 * 3_600_000L) }.orEmpty() } // now and next
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * Now and next for the channel the full-screen overlay is on, whatever category it belongs to. [programmes] only
+     * covers the selected category, so a channel opened from another one (number entry, search, a merge) had no
+     * programme on now there and the overlay hid Restart; this keeps it for the focused channel itself.
+     */
+    val focusedProgrammes: StateFlow<Map<Long, List<GuideProgramme>>> =
+        combine(focused, now, c.db.epgDao().observeGuideVersion()) { f, n, _ -> f to n }
+            .mapLatest { (f, n) -> f?.let { guide.programmes(it.providerId, listOf(it), n, n + 12 * 3_600_000L) }.orEmpty() }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     /** Full screen Up/Down (spec §4.2): the next/previous channel of the selected category, wrapping. */

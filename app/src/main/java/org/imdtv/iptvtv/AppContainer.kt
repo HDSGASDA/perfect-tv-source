@@ -86,11 +86,27 @@ class AppContainer(context: Context) {
     /** Parental controls: the app-wide PIN gate (live, movies, series, Settings). */
     val pin: org.imdtv.iptvtv.data.security.PinGate by lazy {
         org.imdtv.iptvtv.data.security.PinGate().also { g ->
+            // Read the saved settings before anything can ask the gate: the default AppSettings has no PIN, so on a
+            // slow TV box Settings or an adult channel could slip through in the window before the first flow value.
+            // One small preferences file, read once; the collect below keeps it current afterwards.
+            g.current = kotlinx.coroutines.runBlocking { settings.settings.first() }
             background.launch {
                 var lastPin = ""
+                var first = true
+                suspend fun autoLock() {
+                    val adult = db.providerDao().ids().flatMap { db.categoryDao().allKinds(it) }
+                        .filter { org.imdtv.iptvtv.data.security.PinGate.looksAdult(it.name) }.map { it.id }.toSet()
+                    settings.update { it.copy(lockSettings = true, lockedCategories = it.lockedCategories + adult) }
+                }
                 settings.settings.collect { s ->
+                    val justSet = !first && s.parentalPin.isNotEmpty() && lastPin.isEmpty()
                     if (s.parentalPin != lastPin) { g.relock(); lastPin = s.parentalPin }
                     g.current = s
+                    // Lock Settings and every adult-looking category when a PIN is first set, and once at startup for a
+                    // PIN saved before auto-lock existed that still protects nothing. Not on later edits, so a user who
+                    // deliberately clears every lock keeps that choice.
+                    if (justSet || (first && s.parentalPin.isNotEmpty() && s.lockedCategories.isEmpty() && !s.lockSettings)) launch { autoLock() }
+                    first = false
                 }
             }
         }

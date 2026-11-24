@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Channels &amp; categories</string>
     <string name="set_b_group_epg">TV guide (EPG)</string>
     <string name="set_b_group_playback">Playback</string>
+    <string name="set_b_group_parental">Parental controls</string>
     <string name="set_b_group_appearance">Appearance</string>
     <string name="set_b_group_behaviour">App behaviour</string>
     <string name="set_b_group_backup">Backup &amp; sync</string>

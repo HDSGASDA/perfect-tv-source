@@ -26,7 +26,7 @@ import org.imdtv.iptvtv.ui.Field
 import org.imdtv.iptvtv.ui.MenuFrame
 import org.imdtv.iptvtv.ui.MenuItem
 
-/** Playback › Parental controls: the PIN, Lock Settings, and which categories ask for it. */
+/** Parental controls group: the PIN, Lock Settings, and which categories ask for it. */
 @Composable
 fun ParentalPage(vm: SettingsViewModel, first: FocusRequester) {
     val s by vm.settings.collectAsState()

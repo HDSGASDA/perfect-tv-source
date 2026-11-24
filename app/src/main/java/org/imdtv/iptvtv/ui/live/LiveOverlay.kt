@@ -63,11 +63,13 @@ fun LiveOverlay(vm: LiveViewModel, onGuide: () -> Unit, onPick: (ChannelEntity) 
     val programmes by vm.programmes.collectAsState()
     val recents by vm.recents.collectAsState()
     val recentProgs by vm.recentProgrammes.collectAsState()
+    val focusedProgs by vm.focusedProgrammes.collectAsState()
     val strip by vm.strip.collectAsState()
     val logoSource by vm.logoSource.collectAsState()
     val formats by vm.player.formats.collectAsState()
     val ch = channels.find { it.id == focused?.id } ?: focused ?: return
-    val progs = programmes[ch.id] ?: recentProgs[ch.id].orEmpty()
+    // The focused channel's own now/next (always covers "now", whatever category it is in), else the category window.
+    val progs = focusedProgs[ch.id] ?: programmes[ch.id].orEmpty()
     val cur = progs.firstOrNull { it.start <= now && now < it.stop }
     val next = progs.firstOrNull { it.start >= (cur?.stop ?: now) }
     val progress = cur?.let { ((now - it.start).toFloat() / (it.stop - it.start)).coerceIn(0f, 1f) }

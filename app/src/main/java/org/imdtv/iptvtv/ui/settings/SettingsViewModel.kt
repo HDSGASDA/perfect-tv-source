@@ -213,7 +213,7 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setHidden(cat: CategoryEntity, hidden: Boolean) { viewModelScope.launch { c.db.categoryDao().setHidden(cat.id, hidden) } }
 
-    // --- Parental controls (Playback › Parental controls) ---
+    // --- Parental controls (Settings › Parental controls) ---
 
     /** Every category of the active playlist (live, movies and series), for the locked-categories picker. */
     val lockableCategories: StateFlow<List<CategoryEntity>> = perProvider(emptyList()) { p ->

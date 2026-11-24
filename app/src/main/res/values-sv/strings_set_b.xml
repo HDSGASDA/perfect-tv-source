@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Kanaler &amp; kategorier</string>
     <string name="set_b_group_epg">TV-guide (EPG)</string>
     <string name="set_b_group_playback">Uppspelning</string>
+    <string name="set_b_group_parental">Föräldrakontroll</string>
     <string name="set_b_group_appearance">Utseende</string>
     <string name="set_b_group_behaviour">Appens beteende</string>
     <string name="set_b_group_backup">Säkerhetskopia &amp; synk</string>

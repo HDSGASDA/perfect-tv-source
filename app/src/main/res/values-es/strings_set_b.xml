@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Canales y categorías</string>
     <string name="set_b_group_epg">Guía de TV (EPG)</string>
     <string name="set_b_group_playback">Reproducción</string>
+    <string name="set_b_group_parental">Control parental</string>
     <string name="set_b_group_appearance">Apariencia</string>
     <string name="set_b_group_behaviour">Comportamiento de la aplicación</string>
     <string name="set_b_group_backup">Copia y sincronización</string>

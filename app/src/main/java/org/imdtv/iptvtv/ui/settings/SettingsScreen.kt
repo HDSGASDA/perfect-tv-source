@@ -58,6 +58,7 @@ import org.imdtv.iptvtv.ui.FocusBox
 enum class SettingsGroup(val title: String, @StringRes val labelRes: Int) {
     PLAYLISTS("Playlists", R.string.set_b_group_playlists), CHANNELS("Channels & categories", R.string.set_b_group_channels),
     EPG("TV guide (EPG)", R.string.set_b_group_epg), PLAYBACK("Playback", R.string.set_b_group_playback),
+    PARENTAL("Parental controls", R.string.set_b_group_parental),
     APPEARANCE("Appearance", R.string.set_b_group_appearance), BEHAVIOUR("App behaviour", R.string.set_b_group_behaviour),
     BACKUP("Backup & sync", R.string.set_b_group_backup), ABOUT("About", R.string.set_b_group_about),
 }
@@ -269,10 +270,12 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                         if (org.imdtv.iptvtv.BuildConfig.MANAGED) SwitchRow(stringResource(R.string.set_b_diagnostics), stringResource(R.string.set_b_diagnostics_expl), s.diagnosticsOn) { on ->
                             vm.update { it.copy(diagnosticsOn = on) }
                         }
+                    }
+                    SettingsGroup.PARENTAL -> {
                         val parental = ChannelPage.PARENTAL
                         SettingRow(stringResource(parental.titleRes), stringResource(parental.explanationRes),
                             (if (s.parentalPin.isNotEmpty()) stringResource(R.string.set_b_pin_set_value) else stringResource(R.string.set_b_pin_none)) + " ›",
-                            Modifier.focusRequester(openers.getValue(parental))) { park(); page = parental }
+                            first.focusRequester(openers.getValue(parental))) { park(); page = parental }
                     }
                     SettingsGroup.APPEARANCE -> PageRows(listOf(ChannelPage.APPEARANCE_APP, ChannelPage.APPEARANCE_LIVE, ChannelPage.APPEARANCE_VOD), vm, rowsFocus, openers) { park(); page = it }
                     SettingsGroup.BEHAVIOUR -> {

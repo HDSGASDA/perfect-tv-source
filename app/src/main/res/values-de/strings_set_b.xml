@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Sender &amp; Kategorien</string>
     <string name="set_b_group_epg">TV-Programm (EPG)</string>
     <string name="set_b_group_playback">Wiedergabe</string>
+    <string name="set_b_group_parental">Kindersicherung</string>
     <string name="set_b_group_appearance">Darstellung</string>
     <string name="set_b_group_behaviour">App-Verhalten</string>
     <string name="set_b_group_backup">Backup &amp; Sync</string>

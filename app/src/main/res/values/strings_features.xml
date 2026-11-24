@@ -48,7 +48,7 @@
     <string name="set_b_parental_expl">Lock categories and Settings behind a 4-digit PIN</string>
     <string name="set_b_parental_pin_set">Change PIN</string>
     <string name="set_b_parental_pin_new">Set PIN</string>
-    <string name="set_b_parental_pin_expl">Asked for when opening a locked category</string>
+    <string name="set_b_parental_pin_expl">Setting a PIN locks adult categories and Settings automatically; add or remove locks below</string>
     <string name="set_b_parental_pin_remove">Remove PIN</string>
     <string name="set_b_parental_pin_remove_expl">Turn off the parental lock and unlock every category</string>
     <string name="set_b_pin_remove_confirm">Press OK again to remove the PIN and unlock everything</string>
@@ -61,6 +61,8 @@
     <string name="set_b_pin_enter">Enter PIN</string>
     <string name="set_b_pin_enter_for">Enter PIN for %1$s</string>
     <string name="set_b_pin_wrong">Wrong PIN — try again</string>
+    <string name="set_b_pin_forgot">Forgot PIN?</string>
+    <string name="set_b_pin_forgot_expl">To reset your PIN, contact your administrator. They can unlock the app and set a new PIN in Settings › Parental controls.</string>
     <string name="set_b_pin_new_hint">New PIN (4 digits)</string>
     <string name="set_b_pin_confirm_hint">Confirm PIN</string>
     <string name="set_b_pin_mismatch">The PINs don\'t match</string>

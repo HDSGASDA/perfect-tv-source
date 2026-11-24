@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Canale &amp; categorii</string>
     <string name="set_b_group_epg">Ghid TV (EPG)</string>
     <string name="set_b_group_playback">Redare</string>
+    <string name="set_b_group_parental">Control parental</string>
     <string name="set_b_group_appearance">Aspect</string>
     <string name="set_b_group_behaviour">Comportament aplicație</string>
     <string name="set_b_group_backup">Backup &amp; sincronizare</string>

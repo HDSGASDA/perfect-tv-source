@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Κανάλια &amp; κατηγορίες</string>
     <string name="set_b_group_epg">Οδηγός TV (EPG)</string>
     <string name="set_b_group_playback">Αναπαραγωγή</string>
+    <string name="set_b_group_parental">Γονικός έλεγχος</string>
     <string name="set_b_group_appearance">Εμφάνιση</string>
     <string name="set_b_group_behaviour">Συμπεριφορά εφαρμογής</string>
     <string name="set_b_group_backup">Αντίγραφα &amp; συγχρονισμός</string>

@@ -18,6 +18,7 @@
     <string name="set_b_group_channels">Kanallar &amp; kategoriler</string>
     <string name="set_b_group_epg">TV rehberi (EPG)</string>
     <string name="set_b_group_playback">Oynatma</string>
+    <string name="set_b_group_parental">Ebeveyn kontrolü</string>
     <string name="set_b_group_appearance">Görünüm</string>
     <string name="set_b_group_behaviour">Uygulama davranışı</string>
     <string name="set_b_group_backup">Yedekleme &amp; eşitleme</string>

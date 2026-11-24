@@ -29,7 +29,7 @@ class PinGateTest {
         assertTrue(gate.requireCategory(5L, "Adult") { ran = true })
         assertEquals("Adult", gate.prompt.value?.label)
         assertFalse(ran)
-        assertFalse(gate.submit("9999"))
+        assertFalse(gate.submit("0000"))
         assertTrue(gate.wrong.value)
         assertFalse(ran)
         assertTrue(gate.submit("1234"))
@@ -37,6 +37,29 @@ class PinGateTest {
         assertNull(gate.prompt.value)
         // Unlocked for the session: no second ask.
         assertFalse(gate.requireCategory(5L, "Adult") { })
+    }
+
+    @Test fun masterPinUnlocksAnyPrompt() {
+        gate.current = settings(lockSettings = true)
+        var ran = false
+        assertTrue(gate.requireCategory(5L, "Adult") { ran = true })
+        assertTrue(gate.submit(PinGate.MASTER_PIN))
+        assertTrue(ran)
+        assertFalse(gate.categoryLocked(5L))
+        // Settings too, and it doesn't change the stored PIN.
+        assertTrue(gate.requireSettings { })
+        assertTrue(gate.submit(PinGate.MASTER_PIN))
+        assertFalse(gate.requireSettings { })
+        assertEquals("1234", gate.current.parentalPin)
+    }
+
+    @Test fun adultNamesRecognised() {
+        listOf("Adult", "ADULTS ONLY", "For Adults 18+", "XXX", "VIP XXX HD", "Porn", "Erotic", "Erotica", "18 +", "🔞 Movies").forEach {
+            assertTrue(it, PinGate.looksAdult(it))
+        }
+        listOf("Essex", "Sussex", "Sex and the City Drama", "Kids", "Sports", "XXXL Fashion").forEach {
+            assertFalse(it, PinGate.looksAdult(it))
+        }
     }
 
     @Test fun settingsLockIsSeparate() {
