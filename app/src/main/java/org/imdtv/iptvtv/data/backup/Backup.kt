@@ -49,14 +49,36 @@ data class BPlaylist(
     val contentOff: String = "",
     /** "Use this playlist" (older backups: on). */
     val enabled: Boolean = true,
+    /** Channel numbers the user changed (older backups have none). */
+    val channelNumbers: List<BChannelNumber> = emptyList(),
+    /** Channels hidden one by one, by remote id (older backups have none; a sync follower kept showing them, #22). */
+    val hiddenChannels: List<String> = emptyList(),
+    /** Renamed channels and channels with their own guide offset (older backups have none). */
+    val channelEdits: List<BChannelEdit> = emptyList(),
+    /** Channels merged by hand (older backups have none). */
+    val merges: List<BMerge> = emptyList(),
+    /** Merge channels for this playlist (older backups: on). */
+    val mergeOn: Boolean = true,
 )
+
+@Serializable
+data class BChannelEdit(val channel: String, val name: String? = null, val offsetMinutes: Int? = null)
+
+/** [member] plays through [head]; both remote ids. */
+@Serializable
+data class BMerge(val member: String, val head: String)
+
+@Serializable
+data class BChannelNumber(val channel: String, val number: Int)
 
 /** [url] null = the playlist's own guide, whose URL carries the login: restored from the new login. */
 @Serializable
 data class BEpgSource(val url: String?, val name: String?, val priority: Int, val offsetMinutes: Int)
 
 @Serializable
-data class BCategory(val kind: String, val remoteId: String, val hidden: Boolean, val sortOrder: Int, val pinned: Boolean)
+data class BCategory(val kind: String, val remoteId: String, val hidden: Boolean, val sortOrder: Int, val pinned: Boolean,
+                     /** Parental lock on this category (older backups: off). The PIN itself is never backed up. */
+                     val parentalLock: Boolean = false)
 
 /** [channels] are channel remoteIds in group order. */
 @Serializable
@@ -131,6 +153,11 @@ data class BSettings(
     val themeDark: Boolean = AppSettings().themeDark,
     /** The guide order with "Your EPG sources"; absent in older backups, whose [guideOrder] then gets it added. */
     val guideKinds: List<String>? = null,
+    // Absent in older backups. Merging changes which channels a list shows, so a follower without them didn't match (#22).
+    val removeNameSymbols: Boolean = AppSettings().removeNameSymbols,
+    val mergeChannels: Boolean = AppSettings().mergeChannels,
+    val mergeAcross: Boolean = AppSettings().mergeAcross,
+    val mergeBy: String = AppSettings().mergeBy.name,
 ) {
     fun toAppSettings(lastLiveChannelId: Long?): AppSettings {
         val d = AppSettings()
@@ -150,6 +177,8 @@ data class BSettings(
             vodTitleSize = org.imdtv.iptvtv.data.settings.TitleSize.entries.find { it.name == vodTitleSize } ?: org.imdtv.iptvtv.data.settings.TitleSize.LARGE,
             catchUpOn = catchUpOn,
             headerSize = HeaderSize.entries.find { it.name == headerSize } ?: d.headerSize, previewFade = previewFade, themeDark = themeDark,
+            removeNameSymbols = removeNameSymbols, mergeChannels = mergeChannels, mergeAcross = mergeAcross,
+            mergeBy = org.imdtv.iptvtv.data.settings.MergeBy.entries.find { it.name == mergeBy } ?: d.mergeBy,
             startOnBoot = startOnBoot,
             epgUpdateIntervalHours = epgUpdateIntervalHours,
             epgUpdateOnStart = epgUpdateOnStart,
@@ -188,6 +217,7 @@ data class BSettings(
             zapLeftRight = s.zapLeftRight, backToFullScreen = s.backToFullScreen, showChannelNumbers = s.showChannelNumbers, clock24h = s.clock24h,
             playerClockMode = s.playerClock.name, showDate = s.showDate, themeLooks = s.themeLooks, guidesOff = s.guidesOff.toList(), liveSubtitlesOn = s.liveSubtitlesOn, showRecent = s.showRecent, videoAspect = s.videoAspect.name, vodTwoRows = s.vodTwoRows, titleSize = s.titleSize.name, vodTitleSize = s.vodTitleSize.name, catchUpOn = s.catchUpOn,
             headerSize = s.headerSize.name, previewFade = s.previewFade, themeDark = s.themeDark, guideKinds = s.guideOrder.map { it.name },
+            removeNameSymbols = s.removeNameSymbols, mergeChannels = s.mergeChannels, mergeAcross = s.mergeAcross, mergeBy = s.mergeBy.name,
             recordingOn = s.recordingOn, recordTo = s.recordTo.name, startEarlyMin = s.startEarlyMin, endLateMin = s.endLateMin,
             keepAwake = s.keepAwake, smbServer = s.smbServer, smbShare = s.smbShare, smbFolder = s.smbFolder, smbUser = s.smbUser,
         )

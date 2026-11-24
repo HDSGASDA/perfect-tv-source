@@ -187,6 +187,7 @@ abstract class ChannelDao {
     @Query("UPDATE channel SET sortOrder = :sortOrder WHERE id = :id") abstract suspend fun setSortOrder(id: Long, sortOrder: Int?)
     @Query("UPDATE channel SET sortOrder = NULL WHERE providerId = :p") abstract suspend fun clearSortOrders(p: Long)
     @Query("UPDATE channel SET customName = :name WHERE id = :id") abstract suspend fun setCustomName(id: Long, name: String?)
+    @Query("UPDATE channel SET customNumber = :n WHERE id = :id") abstract suspend fun setCustomNumber(id: Long, n: Int?)
     @Query("UPDATE channel SET epgOffsetMinutes = :minutes WHERE id = :id") abstract suspend fun setEpgOffset(id: Long, minutes: Int?)
     /** The channel's alternate URL (Backup stream…); null removes it. A sync never touches this user column. */
     @Query("UPDATE channel SET backupUrl = :url WHERE id = :id") abstract suspend fun setBackupUrl(id: Long, url: String?)
@@ -201,6 +202,12 @@ abstract class ChannelDao {
               AND mergeHead != (id IN (SELECT mergedInto FROM channel WHERE providerId = :p AND mergedInto IS NOT NULL))""")
     abstract suspend fun refreshMergeHeads(p: Long)
     @Query("UPDATE channel SET mergedInto = NULL, mergedAuto = 0 WHERE providerId = :p AND mergedAuto = 1") abstract suspend fun clearAutoMerges(p: Long): Int
+    /** Sync follower: drops what the user set per channel, before the master's is applied. Only rows that have any. */
+    @Query("""UPDATE channel SET hidden = 0, customName = NULL, customNumber = NULL, epgOffsetMinutes = NULL,
+              mergedInto = CASE WHEN mergedAuto = 1 THEN mergedInto ELSE NULL END
+              WHERE providerId = :p AND (hidden = 1 OR customName IS NOT NULL OR customNumber IS NOT NULL OR epgOffsetMinutes IS NOT NULL
+              OR (mergedInto IS NOT NULL AND mergedAuto = 0))""")
+    abstract suspend fun clearUserEdits(p: Long)
     /** Manage channels: how many channels are merged into each of a category's channels. */
     @Query("""SELECT mergedInto AS id, count(*) AS n FROM channel
               WHERE mergedInto IN (SELECT id FROM channel WHERE categoryId = :categoryId) GROUP BY mergedInto""")

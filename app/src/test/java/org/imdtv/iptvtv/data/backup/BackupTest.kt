@@ -300,6 +300,48 @@ class BackupTest {
         assertEquals(a.snapshot(p), b.snapshot(q))
     }
 
+    /** #22: a follower gets the master's hidden channels, renames, guide offsets, numbers, hand merges and Merge channels. */
+    @Test fun mirrorCarriesChannelEditsMergesAndLocks() = runTest {
+        val a = env()
+        val p = a.providers.add(xtream()).also { a.providers.syncNow(it) }
+        val master = a.db.channelDao().byProvider(p).associateBy { it.remoteId }
+        a.db.channelDao().setHidden(master.getValue("2").id, true)
+        a.db.channelDao().setCustomName(master.getValue("1").id, "One")
+        a.db.channelDao().setEpgOffset(master.getValue("1").id, 30)
+        a.db.channelDao().setCustomNumber(master.getValue("3").id, 99)
+        a.db.channelDao().setMergedInto(listOf(master.getValue("2").id), master.getValue("1").id, false)
+        a.db.providerDao().setMergeOn(p, false)
+        val lockedCat = a.db.categoryDao().all(p, Kind.LIVE).first { it.remoteId == "6" }
+        a.settings.update { it.copy(parentalPin = "1234", lockedCategories = setOf(lockedCat.id), mergeAcross = true, removeNameSymbols = true) }
+        val wire = org.imdtv.iptvtv.data.sync.decodeSnapshot(org.imdtv.iptvtv.data.sync.encodeSnapshot(a.backup.syncSnapshot()))
+
+        val b = env()
+        val q = b.providers.add(xtream()).also { b.providers.syncNow(it) }
+        val mine = b.db.channelDao().byProvider(q).associateBy { it.remoteId }
+        // The follower's own edits are dropped, so it ends up matching the master exactly.
+        b.db.channelDao().setHidden(mine.getValue("3").id, true)
+        b.db.channelDao().setCustomName(mine.getValue("1").id, "Local")
+        b.db.channelDao().setCustomNumber(mine.getValue("1").id, 5)
+        b.settings.update { it.copy(parentalPin = "4321") }
+
+        b.backup.mirror(wire) {}
+
+        val after = b.db.channelDao().byProvider(q).associateBy { it.remoteId }
+        assertTrue(after.getValue("2").hidden)
+        assertFalse(after.getValue("3").hidden)
+        assertEquals("One", after.getValue("1").customName)
+        assertEquals(30, after.getValue("1").epgOffsetMinutes)
+        assertEquals(null, after.getValue("1").customNumber)
+        assertEquals(99, after.getValue("3").customNumber)
+        assertEquals(after.getValue("1").id, after.getValue("2").mergedInto)
+        assertFalse(b.db.providerDao().get(q)!!.mergeOn)
+        val s = b.settings.settings.first()
+        assertTrue(s.mergeAcross)
+        assertTrue(s.removeNameSymbols)
+        assertEquals("4321", s.parentalPin) // the PIN never leaves the box it was set on
+        assertEquals(setOf(b.db.categoryDao().all(q, Kind.LIVE).first { it.remoteId == "6" }.id), s.lockedCategories)
+    }
+
     @Test fun mirrorAddsNewPlaylistWithItsLogin() = runTest {
         val a = env()
         a.customise()

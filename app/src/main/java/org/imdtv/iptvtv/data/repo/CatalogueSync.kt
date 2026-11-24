@@ -61,12 +61,18 @@ class CatalogueSync(
             if (!loads(k)) { clear(providerId, k); return KindResult(0, 0, 0) }
             return fetch()
         }
+        // Counts tick per write chunk so a long sync visibly moves instead of sitting on one line for minutes.
+        fun n(i: Int) = "%,d".format(i)
+        fun step(what: String, done: Int, total: Int, savedSoFar: String) =
+            onProgress("$what… ${n(done)} of ${n(total)}" + (if (savedSoFar.isEmpty()) "" else " · $savedSoFar saved"))
         onProgress("Downloading channels…")
-        val live = kind(Kind.LIVE) { syncLive(providerId, source.liveCategories(), source.liveChannels()) }
-        onProgress("Downloading movies… · ${live.items} channels saved")
-        val vod = kind(Kind.MOVIE) { syncMovies(providerId, source.vodCategories(), source.movies()) }
-        onProgress("Downloading series… · ${live.items} channels, ${vod.items} movies saved")
-        val ser = kind(Kind.SERIES) { syncSeries(providerId, source.seriesCategories(), source.series()) }
+        val live = kind(Kind.LIVE) { syncLive(providerId, source.liveCategories(), source.liveChannels()) { d, t -> step("Saving channels", d, t, "") } }
+        val liveSaved = if (live.items > 0) "${n(live.items)} channels" else ""
+        onProgress("Downloading movies…" + if (liveSaved.isEmpty()) "" else " · $liveSaved saved")
+        val vod = kind(Kind.MOVIE) { syncMovies(providerId, source.vodCategories(), source.movies()) { d, t -> step("Saving movies", d, t, liveSaved) } }
+        val vodSaved = listOf(liveSaved, if (vod.items > 0) "${n(vod.items)} movies" else "").filter { it.isNotEmpty() }.joinToString(", ")
+        onProgress("Downloading series…" + if (vodSaved.isEmpty()) "" else " · $vodSaved saved")
+        val ser = kind(Kind.SERIES) { syncSeries(providerId, source.seriesCategories(), source.series()) { d, t -> step("Saving series", d, t, vodSaved) } }
         Kind.entries.forEach { if (!loads(it)) clear(providerId, it) } // switched off mid-sync; cheap when already empty
         return SyncResult(
             categories = live.categories + vod.categories + ser.categories,
@@ -122,7 +128,7 @@ class CatalogueSync(
 
     // No transaction around a whole kind (46k channels, 185k movies): new rows go in chunks, rows the provider changed
     // get a provider-columns-only update, unchanged rows aren't written at all, so user writes never wait long.
-    private suspend fun syncLive(providerId: Long, cats: List<Category>, channels: List<org.imdtv.iptvtv.data.model.Channel>): KindResult {
+    private suspend fun syncLive(providerId: Long, cats: List<Category>, channels: List<org.imdtv.iptvtv.data.model.Channel>, saved: (Int, Int) -> Unit = { _, _ -> }): KindResult {
         val unique = channels.distinctBy { it.remoteId }
         val (allCats, resolve) = withUncategorised(cats, Kind.LIVE, unique.map { it.categoryRemoteId })
         val c = db.withTransaction { syncCategories(providerId, Kind.LIVE, allCats) }
@@ -138,8 +144,9 @@ class CatalogueSync(
                 if (n != ChannelFromProvider(old.id, old.name, old.logo, old.number, old.tvgId, old.streamUrl, old.categoryId, old.drmType, old.drmKey, old.archiveDays, old.catchupSource)) changed += n
             }
         }
-        fresh.chunked(WRITE_CHUNK).forEach { dao.upsert(it) }
-        changed.chunked(WRITE_CHUNK).forEach { dao.updateFromProvider(it) }
+        val writes = fresh.size + changed.size
+        fresh.chunked(WRITE_CHUNK).forEachIndexed { i, it -> dao.upsert(it); saved(minOf((i + 1) * WRITE_CHUNK, fresh.size), writes) }
+        changed.chunked(WRITE_CHUNK).forEachIndexed { i, it -> dao.updateFromProvider(it); saved(fresh.size + minOf((i + 1) * WRITE_CHUNK, changed.size), writes) }
         val keep = unique.mapTo(HashSet()) { it.remoteId }
         existing.values.filter { it.remoteId !in keep }.map { it.id }.chunked(SQL_DELETE_CHUNK).forEach { ids ->
             db.withTransaction { dao.unmergeFrom(ids); dao.deleteIds(ids); db.favouriteDao().deleteForItems(providerId, Kind.LIVE, ids) }
@@ -148,7 +155,7 @@ class CatalogueSync(
         return KindResult(c.idByRemote.size, unique.size, c.newlyHidden)
     }
 
-    private suspend fun syncMovies(providerId: Long, cats: List<Category>, movies: List<org.imdtv.iptvtv.data.model.Movie>): KindResult {
+    private suspend fun syncMovies(providerId: Long, cats: List<Category>, movies: List<org.imdtv.iptvtv.data.model.Movie>, saved: (Int, Int) -> Unit = { _, _ -> }): KindResult {
         val unique = movies.distinctBy { it.remoteId }
         val (allCats, resolve) = withUncategorised(cats, Kind.MOVIE, unique.map { it.categoryRemoteId })
         val c = db.withTransaction { syncCategories(providerId, Kind.MOVIE, allCats) }
@@ -165,8 +172,9 @@ class CatalogueSync(
                 if (n != MovieFromProvider(old.id, old.name, old.poster, old.year, old.rating, old.streamUrl, old.categoryId)) changed += n
             }
         }
-        fresh.chunked(WRITE_CHUNK).forEach { dao.upsert(it) }
-        changed.chunked(WRITE_CHUNK).forEach { dao.updateFromProvider(it) }
+        val writes = fresh.size + changed.size
+        fresh.chunked(WRITE_CHUNK).forEachIndexed { i, it -> dao.upsert(it); saved(minOf((i + 1) * WRITE_CHUNK, fresh.size), writes) }
+        changed.chunked(WRITE_CHUNK).forEachIndexed { i, it -> dao.updateFromProvider(it); saved(fresh.size + minOf((i + 1) * WRITE_CHUNK, changed.size), writes) }
         val keep = unique.mapTo(HashSet()) { it.remoteId }
         existing.values.filter { it.remoteId !in keep }.map { it.id }.chunked(SQL_DELETE_CHUNK).forEach { ids ->
             db.withTransaction {
@@ -178,7 +186,7 @@ class CatalogueSync(
         return KindResult(c.idByRemote.size, unique.size, c.newlyHidden)
     }
 
-    private suspend fun syncSeries(providerId: Long, cats: List<Category>, series: List<org.imdtv.iptvtv.data.model.Series>): KindResult {
+    private suspend fun syncSeries(providerId: Long, cats: List<Category>, series: List<org.imdtv.iptvtv.data.model.Series>, saved: (Int, Int) -> Unit = { _, _ -> }): KindResult {
         val unique = series.distinctBy { it.remoteId }
         val (allCats, resolve) = withUncategorised(cats, Kind.SERIES, unique.map { it.categoryRemoteId })
         val c = db.withTransaction { syncCategories(providerId, Kind.SERIES, allCats) }
@@ -195,8 +203,9 @@ class CatalogueSync(
                 if (n != SeriesFromProvider(old.id, old.name, old.poster, old.year, old.rating, old.categoryId)) changed += n
             }
         }
-        fresh.chunked(WRITE_CHUNK).forEach { dao.upsert(it) }
-        changed.chunked(WRITE_CHUNK).forEach { dao.updateFromProvider(it) }
+        val writes = fresh.size + changed.size
+        fresh.chunked(WRITE_CHUNK).forEachIndexed { i, it -> dao.upsert(it); saved(minOf((i + 1) * WRITE_CHUNK, fresh.size), writes) }
+        changed.chunked(WRITE_CHUNK).forEachIndexed { i, it -> dao.updateFromProvider(it); saved(fresh.size + minOf((i + 1) * WRITE_CHUNK, changed.size), writes) }
         val keep = unique.mapTo(HashSet()) { it.remoteId }
         existing.values.filter { it.remoteId !in keep }.map { it.id }.chunked(SQL_DELETE_CHUNK).forEach { ids ->
             db.withTransaction {

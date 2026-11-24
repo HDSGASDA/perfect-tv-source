@@ -15,7 +15,7 @@ android {
 
     defaultConfig {
         applicationId = "org.imdtv.iptvtv"
-        minSdk = 26
+        minSdk = 25 // Android 7.1: Fire OS 6 on the 1st-gen Fire TV Stick 4K refused to install an APK needing 8 (#30)
         targetSdk = 35
         versionCode = 11
         versionName = "0.6.1"
@@ -82,6 +82,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true // java.time and java.util.stream on Android 7.1
     }
 
     testOptions {
@@ -98,6 +99,7 @@ ksp {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.foundation)
