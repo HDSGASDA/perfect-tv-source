@@ -198,6 +198,24 @@ export async function route(request, env, path) {
           devices: [...devices.values()].sort((a, b) => b.lastSeenAt - a.lastSeenAt).slice(0, 100),
         });
       }
+      if (part === "crashes" && method === "GET") {
+        const { results } = await env.DB.prepare("SELECT received_at,occurred_at,version_name,device,android,type,fingerprint,thread,stack FROM crashes ORDER BY occurred_at DESC,id DESC LIMIT 2000").all();
+        const groups = new Map();
+        for (const row of results) {
+          const g = groups.get(row.fingerprint) || { fingerprint: row.fingerprint, type: row.type, count: 0, firstAt: row.occurred_at, lastAt: 0, versions: new Set(), devices: new Set(), thread: row.thread, stack: row.stack, android: row.android };
+          g.count += 1; g.firstAt = Math.min(g.firstAt, row.occurred_at); g.lastAt = Math.max(g.lastAt, row.occurred_at);
+          g.versions.add(row.version_name); g.devices.add(`${row.device} (API ${row.android})`);
+          if (row.occurred_at >= g.lastAt) { g.stack = row.stack; g.thread = row.thread; }
+          groups.set(row.fingerprint, g);
+        }
+        return json({
+          reports: results.length, lastReceivedAt: results[0]?.received_at || null,
+          crashes: [...groups.values()].sort((a, b) => b.lastAt - a.lastAt).slice(0, 200).map(g => ({
+            fingerprint: g.fingerprint, type: g.type, count: g.count, firstAt: g.firstAt, lastAt: g.lastAt,
+            versions: [...g.versions].slice(0, 20), devices: [...g.devices].slice(0, 20), thread: g.thread, stack: g.stack,
+          })),
+        });
+      }
       if (part === "releases" && method === "POST") return await upload(request,env);
       const action=part.match(/^releases\/(\d+)\/(publish|withdraw)$/);
       if(action&&method==="POST") { const code=Number(action[1]); if(action[2]==="withdraw"){const r=await env.DB.prepare("UPDATE releases SET status='withdrawn' WHERE version_code=? AND status IN ('draft','published')").bind(code).run();return r.meta.changes?new Response(null,{status:204}):fail("Release does not exist or is already withdrawn",409);} const rel=await env.DB.prepare("SELECT status FROM releases WHERE version_code=?").bind(code).first();if(!rel)return fail("Release not found",404);if(rel.status!=="draft")return fail("Only a draft can be published; withdrawn releases cannot be republished",409);const highest=await env.DB.prepare("SELECT COALESCE(MAX(version_code),0) n FROM releases WHERE published_at IS NOT NULL").first();if(code<=highest.n)return fail("Publishing must increase the highest ever published version code",409);await env.DB.prepare("UPDATE releases SET status='published',published_at=? WHERE version_code=?").bind(now(),code).run();return new Response(null,{status:204}); }
@@ -219,6 +237,25 @@ export async function route(request, env, path) {
       const channels = b.channels.map(ch => ({ name: ch.name, seconds: ch.seconds, stalls: ch.stalls, underruns: ch.underruns, droppedFrames: ch.droppedFrames, errors: ch.errors }));
       await env.DB.prepare("INSERT INTO diagnostics(received_at,version_code,version_name,device,android,channels_json) VALUES(?,?,?,?,?,?)").bind(now(), b.versionCode, b.versionName, b.device, b.android, JSON.stringify(channels)).run();
       await env.DB.prepare("DELETE FROM diagnostics WHERE id NOT IN (SELECT id FROM diagnostics ORDER BY id DESC LIMIT 5000)").run();
+      return new Response(null, { status: 204 });
+    }
+    if (path === "api/app/crashes" && method === "POST") {
+      // Opt-in crash reports from managed apps: exception type, this app's frames and a fingerprint. Same per-IP
+      // budget as playback diagnostics, and rows are pruned to the newest 5000.
+      const ip = request.headers.get("cf-connecting-ip") || "unknown";
+      const bucket = await digest(`crash:${ip}`);
+      const lim = await env.DB.prepare("INSERT INTO login_limits(bucket,window_start,attempts) VALUES(?,?,1) ON CONFLICT(bucket) DO UPDATE SET attempts=CASE WHEN window_start<=? THEN 1 ELSE attempts+1 END,window_start=CASE WHEN window_start<=? THEN excluded.window_start ELSE window_start END RETURNING attempts").bind(bucket, now(), now() - 3600, now() - 3600).first();
+      if (lim.attempts > 30) return fail("Too many reports; try again later", 429);
+      const b = await bodyJson(request);
+      const okInt = (v, max) => Number.isSafeInteger(v) && v >= 0 && v <= max;
+      const text = (v, max) => typeof v === "string" && v.length > 0 && v.length <= max && !/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(v);
+      if (!okInt(b.versionCode, 2100000000) || b.versionCode < 1 || !text(b.versionName, 100) || typeof b.device !== "string" || b.device.length > 80 || !okInt(b.android, 100)) return fail("Invalid crash report");
+      if (!text(b.type, 200) || !text(b.thread, 80) || typeof b.fingerprint !== "string" || !/^[a-f0-9]{8,64}$/.test(b.fingerprint) || typeof b.stack !== "string" || b.stack.length > 4000) return fail("Invalid crash report");
+      // Occurred-at is epoch milliseconds from the box; allow a day of clock skew either way, else use arrival time.
+      const at = okInt(b.at, Date.now() + 86400000) ? Math.floor(b.at / 1000) : now();
+      await env.DB.prepare("INSERT INTO crashes(received_at,occurred_at,version_code,version_name,device,android,type,fingerprint,thread,stack) VALUES(?,?,?,?,?,?,?,?,?,?)")
+        .bind(now(), at, b.versionCode, b.versionName, b.device, b.android, b.type, b.fingerprint, b.thread, b.stack).run();
+      await env.DB.prepare("DELETE FROM crashes WHERE id NOT IN (SELECT id FROM crashes ORDER BY id DESC LIMIT 5000)").run();
       return new Response(null, { status: 204 });
     }
     if (path === "api/app/config" && method === "GET") return json(await getConfig(env),200,{"cache-control":"public, max-age=60, stale-while-revalidate=300"});
