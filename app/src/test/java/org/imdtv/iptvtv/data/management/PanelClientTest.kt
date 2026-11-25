@@ -74,6 +74,26 @@ class PanelClientTest {
         assertThrows(IllegalArgumentException::class.java) { client.release(11) }
     }
 
+    @Test fun crashReportPostsToThePanelOriginWithoutCredentials() {
+        server.enqueue(MockResponse().setResponseCode(204))
+        client.crashReport(CrashReport(at = 1_700_000_000_000, type = "java.lang.IllegalStateException",
+            fingerprint = "0123456789abcdef", stack = "org.imdtv.iptvtv.ui.Foo.bar:12", thread = "main",
+            versionCode = 27, versionName = "0.6.2-managed.15", device = "NE2210", android = 34))
+        val request = server.takeRequest()
+        assertEquals("/api/app/crashes", request.path)
+        assertEquals("POST", request.method)
+        assertNull(request.getHeader("Authorization"))
+        val body = request.body.readUtf8()
+        assertTrue(body.contains("\"fingerprint\":\"0123456789abcdef\""))
+        assertFalse("no account data belongs in a crash report", body.contains("password"))
+    }
+
+    @Test fun crashReportFailureIsReportedToTheCaller() {
+        server.enqueue(MockResponse().setResponseCode(500))
+        assertThrows(IOException::class.java) {
+            client.crashReport(CrashReport(1, "t", "0123456789abcdef", "s", "main", 27, "v", "box", 34))
+        }
+    }
     private fun releaseJson(hash: String = "a".repeat(64), url: String = server.url("/api/app/apks/test.apk").toString()) =
         """{"versionCode":12,"versionName":"0.6.0-managed.2","apkUrl":"$url","sha256":"$hash","notes":"Changes"}"""
 }

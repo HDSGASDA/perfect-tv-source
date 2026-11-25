@@ -1,4 +1,5 @@
 <resources>
-    <string name="app_name">Perfect TV</string>
+    <!-- The brand is the same in every language, so it is deliberately not translated. -->
+    <string name="app_name" translatable="false">Perfect TV</string>
     <string name="live_retry">Retry</string>
 </resources>

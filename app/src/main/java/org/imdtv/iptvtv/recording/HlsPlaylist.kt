@@ -12,7 +12,7 @@ sealed interface Hls {
 
 /** An HLS playlist, or null when [text] isn't one. URIs resolve against [base] (the final URL after redirects). */
 fun parseHls(text: String, base: HttpUrl): Hls? {
-    val lines = text.removePrefix("﻿").lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+    val lines = text.removePrefix("\uFEFF").lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     if (lines.firstOrNull() != "#EXTM3U") return null
     val variants = mutableListOf<Variant>()
     val segments = mutableListOf<HttpUrl>()

@@ -139,9 +139,11 @@ class PlayerManager(private val context: Context) {
     fun setSubtitleAppearance(sizeFraction: Float, bottomFraction: Float, backgroundColor: Int) {
         subtitleSizeFraction = sizeFraction
         subtitleBottomFraction = bottomFraction
+        // CaptionStyleCompat(foreground, background, window, edgeType, edgeColor, typeface): the edge type is the
+        // fourth argument, not the fifth. Passing the colour there left an undefined edge type in the style.
         subtitleStyle = androidx.media3.ui.CaptionStyleCompat(
             android.graphics.Color.WHITE, backgroundColor, android.graphics.Color.TRANSPARENT,
-            android.graphics.Color.WHITE, androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE, android.graphics.Typeface.DEFAULT)
+            androidx.media3.ui.CaptionStyleCompat.EDGE_TYPE_NONE, android.graphics.Color.WHITE, android.graphics.Typeface.DEFAULT)
         applySubtitleStyle()
     }
 

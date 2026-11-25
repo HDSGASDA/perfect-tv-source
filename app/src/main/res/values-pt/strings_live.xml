@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Opções de junção</string>
     <string name="live_menu_merge_options_title">Opções de junção · %1$s</string>
     <string name="live_rail_jump_hint">Manter cima: topo / lista anterior\nManter baixo: lista seguinte / fim</string>
+
+    <string name="live_retry">Tentar novamente</string>
 </resources>

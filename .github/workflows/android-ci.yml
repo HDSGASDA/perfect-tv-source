@@ -30,7 +30,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -46,5 +46,25 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Run Android unit tests
-        run: ./gradlew testStandardDebugUnitTest
+      # Both flavors: the managed one carries the panel client, parental controls and the updater, and a
+      # managed-only compile break or a failed managed test must not reach a release.
+      - name: Run Android unit tests (standard and managed)
+        run: ./gradlew testStandardDebugUnitTest testManagedDebugUnitTest
+
+      - name: Assemble the managed debug APK
+        run: ./gradlew :app:assembleManagedDebug -PpanelBaseUrl=https://ci.example.invalid
+
+      # minSdk is 25 (Fire OS 6). Lint is the only check that catches an API call newer than that,
+      # so it runs on every change; app/lint.xml lists the known false positives.
+      - name: Lint the managed variant
+        run: ./gradlew :app:lintManagedDebug -PpanelBaseUrl=https://ci.example.invalid
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-managed-debug
+          path: |
+            app/build/reports/lint-results-managedDebug.html
+            app/build/reports/lint-results-managedDebug.xml
+          if-no-files-found: ignore

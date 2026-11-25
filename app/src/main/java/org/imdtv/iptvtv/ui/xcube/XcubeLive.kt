@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,7 +60,9 @@ private val CARD_TEXT = Color(0xFF1A3A0E)
 fun XcubeLive(vm: LiveViewModel, card: XcubeCard, onFullScreen: (ChannelEntity) -> Unit) {
     val state = rememberGuideState(vm)
     // Switched to: the guide's own refocus would take focus from the card a frame later (Left then opened the rail).
-    remember { if (card.arrivedBySwitch) state.heldFocus = card.focus }
+    // A side effect on the way in, so LaunchedEffect, not remember (which must return the value it caches). Keyed on
+    // the card so it also runs if this blade is ever recomposed with a different one instead of being recreated.
+    LaunchedEffect(card) { if (card.arrivedBySwitch) state.heldFocus = card.focus }
     val channels by vm.channels.collectAsState()
     val programmes by vm.programmes.collectAsState()
     val now by vm.now.collectAsState()

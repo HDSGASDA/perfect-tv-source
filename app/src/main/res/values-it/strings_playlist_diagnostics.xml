@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Prova la connessione</string>
+    <string name="set_a_test_playlist_expl">Controlla le credenziali e conta i canali e i titoli disponibili</string>
+    <string name="set_a_testing_playlist">Controllo delle credenziali e del catalogo…</string>
+</resources>

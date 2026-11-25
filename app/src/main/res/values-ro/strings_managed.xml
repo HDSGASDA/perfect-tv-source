@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Server configurat: %1$s</string>
+    <string name="managed_server_unknown">Server gestionat</string>
+    <string name="managed_server_removed">Acest server a fost eliminat sau modificat. Selectează un server mai sus și introdu din nou datele de autentificare.</string>
+    <string name="managed_saved_retry"> Noua ta selecție de server a fost salvată, dar încărcarea a eșuat. Verifică datele de autentificare și încearcă din nou.</string>
+    <string name="managed_notice">Alege un server furnizat de serviciul tău. Schimbarea serverului golește câmpurile de autentificare. Această aplicație verifică un panou de administrare separat pentru anunțuri, opțiuni de server și actualizări cât timp este deschisă. Datele tale de autentificare la furnizor nu sunt trimise panoului de administrare. Actualizările necesită confirmarea instalării.</string>
+    <string name="managed_message_dismiss">Închide mesajul</string>
+    <string name="managed_message_sender">Anunț al serviciului</string>
+</resources>

@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Birleştirme seçenekleri</string>
     <string name="live_menu_merge_options_title">Birleştirme seçenekleri · %1$s</string>
     <string name="live_rail_jump_hint">Yukarı basılı tut: başa / önceki liste\nAşağı basılı tut: sonraki liste / sona</string>
+
+    <string name="live_retry">Yeniden dene</string>
 </resources>

@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Opțiuni de combinare</string>
     <string name="live_menu_merge_options_title">Opțiuni de combinare · %1$s</string>
     <string name="live_rail_jump_hint">Ține sus: început / lista anterioară\nȚine jos: lista următoare / sfârșit</string>
+
+    <string name="live_retry">Reîncearcă</string>
 </resources>

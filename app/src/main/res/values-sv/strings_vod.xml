@@ -198,4 +198,10 @@
     <string name="vod_pack_no_space">Inte tillräckligt med utrymme för att importera paketet</string>
     <string name="vod_pack_no_images">Inga bilder i zip-filen</string>
     <string name="vod_pack_unreadable">Zip-filen kunde inte läsas</string>
+
+    <string name="vod_rec_filter_empty">Inga inspelningar i det här filtret.</string>
+    <string name="vod_rec_filter_all">Alla</string>
+    <string name="vod_rec_filter_upcoming">Kommande</string>
+    <string name="vod_rec_filter_finished">Avslutade</string>
+    <string name="vod_rec_filter_issues">Problem</string>
 </resources>

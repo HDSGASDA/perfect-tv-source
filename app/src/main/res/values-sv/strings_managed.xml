@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Servern konfigurerad: %1$s</string>
+    <string name="managed_server_unknown">Hanterad server</string>
+    <string name="managed_server_removed">Den här servern har tagits bort eller ändrats. Välj en server ovan och ange dina inloggningsuppgifter igen.</string>
+    <string name="managed_saved_retry"> Ditt nya serverval sparades, men inläsningen misslyckades. Kontrollera inloggningen och försök igen.</string>
+    <string name="managed_notice">Välj en server som din tjänst tillhandahåller. Att byta server rensar inloggningsfälten. Den här appen kontrollerar en separat hanteringspanel för meddelanden, serverval och appuppdateringar medan den är öppen. Dina inloggningsuppgifter hos leverantören skickas inte till hanteringspanelen. Uppdateringar kräver att installationen bekräftas.</string>
+    <string name="managed_message_dismiss">Stäng meddelandet</string>
+    <string name="managed_message_sender">Meddelande från tjänsten</string>
+</resources>

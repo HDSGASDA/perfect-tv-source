@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Έλεγχος σύνδεσης</string>
+    <string name="set_a_test_playlist_expl">Ελέγχει τα στοιχεία σύνδεσης και μετρά τα διαθέσιμα κανάλια και τίτλους</string>
+    <string name="set_a_testing_playlist">Έλεγχος στοιχείων σύνδεσης και καταλόγου…</string>
+</resources>

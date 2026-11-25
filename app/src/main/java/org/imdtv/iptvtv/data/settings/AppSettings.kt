@@ -204,6 +204,8 @@ data class AppSettings(
     val matchRefreshRate: Boolean = false,
     /** Opt-in: anonymous playback totals (stalls, underruns, dropped frames) to the management panel. */
     val diagnosticsOn: Boolean = false,
+    /** Opt-in: crash reports (exception type, app frames, box model) to the management panel. Off by default. */
+    val crashReportsOn: Boolean = false,
 ) {
     /** The per-theme appearance: colour, mode, guide rows, header size, preview fade. */
     fun look() = listOf(themeColour.name, themeDark, guideRows, headerSize.name, previewFade).joinToString(";")

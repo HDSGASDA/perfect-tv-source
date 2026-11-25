@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Spellisteförfrågan misslyckades: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Catch-up</string>
     <string name="set_b_catch_up_expl">Se tidigare program på kanaler som erbjuder det. Av döljer klockikonerna, Börja om och tidigare program</string>
+
+    <string name="set_b_restore_choose">Välj vad som ska återställas</string>
+    <string name="set_b_restore_playlist_expl">Återställ den här %1$s-spellistan och dess val</string>
+    <string name="set_b_restore_settings">Återställ appens inställningar</string>
+    <string name="set_b_restore_settings_expl">Inställningar för tema, uppspelning, guide och inspelning</string>
+    <string name="set_b_restore_continue">Fortsätt</string>
+    <string name="set_b_restore_continue_expl">Granska inloggningarna innan något ändras</string>
+    <string name="set_b_update_channel">Appuppdateringar</string>
+    <string name="set_b_release_notes">Versionsinformation</string>
 </resources>

@@ -52,6 +52,13 @@ data class ChannelDiagnostics(val name: String, val seconds: Long, val stalls: I
 @Serializable
 data class DiagnosticsPayload(val versionCode: Int, val versionName: String, val device: String, val android: Int, val channels: List<ChannelDiagnostics>)
 
+/** One opt-in crash report: the exception type, this app's frames and a fingerprint, never a message or account data. */
+@Serializable
+data class CrashReport(
+    val at: Long, val type: String, val fingerprint: String, val stack: String, val thread: String,
+    val versionCode: Int, val versionName: String, val device: String, val android: Int,
+)
+
 /** Public broadcast feed. Never attach provider credentials, hardware identifiers or an embedded administrator key. */
 class PanelClient(
     http: OkHttpClient,
@@ -110,6 +117,16 @@ class PanelClient(
     fun diagnostics(payload: DiagnosticsPayload) {
         val url = checkedUrl("${baseUrl.trimEnd('/')}/api/app/diagnostics")
         val body = json.encodeToString(DiagnosticsPayload.serializer(), payload)
+            .toRequestBody("application/json; charset=utf-8".toMediaType())
+        http.newCall(Request.Builder().url(url).post(body).build()).execute().use { r ->
+            if (!r.isSuccessful) throw IOException("Panel returned HTTP ${r.code}")
+        }
+    }
+
+    /** Uploads one crash report; throws IOException on any failure. */
+    fun crashReport(report: CrashReport) {
+        val url = checkedUrl("${baseUrl.trimEnd('/')}/api/app/crashes")
+        val body = json.encodeToString(CrashReport.serializer(), report)
             .toRequestBody("application/json; charset=utf-8".toMediaType())
         http.newCall(Request.Builder().url(url).post(body).build()).execute().use { r ->
             if (!r.isSuccessful) throw IOException("Panel returned HTTP ${r.code}")

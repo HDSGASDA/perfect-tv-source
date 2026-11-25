@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Opciones de fusión</string>
     <string name="live_menu_merge_options_title">Opciones de fusión · %1$s</string>
     <string name="live_rail_jump_hint">Mantén arriba: inicio / lista anterior\nMantén abajo: lista siguiente / final</string>
+
+    <string name="live_retry">Reintentar</string>
 </resources>

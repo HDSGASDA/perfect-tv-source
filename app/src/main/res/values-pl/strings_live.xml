@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Opcje scalania</string>
     <string name="live_menu_merge_options_title">Opcje scalania · %1$s</string>
     <string name="live_rail_jump_hint">Przytrzymaj w górę: początek / poprzednia lista\nPrzytrzymaj w dół: następna lista / koniec</string>
+
+    <string name="live_retry">Spróbuj ponownie</string>
 </resources>

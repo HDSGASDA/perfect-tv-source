@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Serveur configuré : %1$s</string>
+    <string name="managed_server_unknown">Serveur géré</string>
+    <string name="managed_server_removed">Ce serveur a été supprimé ou modifié. Sélectionnez un serveur ci-dessus et saisissez à nouveau vos identifiants.</string>
+    <string name="managed_saved_retry"> Votre nouveau choix de serveur a été enregistré, mais le chargement a échoué. Vérifiez les identifiants et réessayez.</string>
+    <string name="managed_notice">Choisissez un serveur fourni par votre service. Changer de serveur efface les champs d\'identification. Cette application consulte un panneau de gestion distinct pour les annonces, les choix de serveur et les mises à jour tant qu\'elle est ouverte. Vos identifiants fournisseur ne sont pas envoyés au panneau de gestion. Les mises à jour demandent une confirmation d\'installation.</string>
+    <string name="managed_message_dismiss">Fermer le message</string>
+    <string name="managed_message_sender">Annonce du service</string>
+</resources>

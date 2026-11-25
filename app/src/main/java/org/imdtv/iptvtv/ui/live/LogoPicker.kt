@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,12 +59,13 @@ fun LogoPicker(vm: LiveViewModel, ch: ChannelEntity, name: String, onDismiss: ()
     val context = LocalContext.current
     var candidates by remember { mutableStateOf<List<String>?>(null) }
     var files by remember { mutableStateOf<List<SharedFile>?>(null) }
-    var filesAsked by remember { mutableStateOf(0) } // bumped when image access is granted: list again
+    var filesAsked by remember { mutableIntStateOf(0) } // bumped when image access is granted: list again
     LaunchedEffect(ch.id) { candidates = runCatching { vm.logoCandidates(ch) }.getOrDefault(emptyList()) }
     LaunchedEffect(ch.id, filesAsked) { files = listSharedFiles(context, IMAGE_EXTS) }
+    val badType = stringResource(R.string.live_logo_bad_type) // resolved in composition: follows an app language change
     fun pickFile(uri: Uri, fileName: String?) {
         val ext = fileName?.substringAfterLast('.', "")?.lowercase()
-        if (ext !in IMAGE_EXTS) { Toast.makeText(context, context.getString(R.string.live_logo_bad_type), Toast.LENGTH_LONG).show(); return }
+        if (ext !in IMAGE_EXTS) { Toast.makeText(context, badType, Toast.LENGTH_LONG).show(); return }
         vm.setCustomLogoFile(ch, uri, ext!!); onDismiss()
     }
     val browse = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { r ->

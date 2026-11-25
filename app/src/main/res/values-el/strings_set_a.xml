@@ -297,4 +297,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Αφαίρεση ειδικών χαρακτήρων</string>
     <string name="set_a_remove_symbols_expl">Αφαίρεση μικρών και κυκλωμένων γραμμάτων και συμβόλων όπως «ᴿᴬᵂ», «ⓋⒾⓅ» και «◉» από τα ονόματα καναλιών</string>
+
+    <string name="set_a_account_check">Έλεγχος λήξης λογαριασμού</string>
+    <string name="set_a_account_not_checked">Πατήστε OK για έλεγχο της ενεργής λίστας</string>
+    <string name="set_a_account_checking">Έλεγχος ενεργής λίστας…</string>
+    <string name="set_a_account_no_playlist">Δεν υπάρχει ενεργή λίστα</string>
+    <string name="set_a_account_non_xtream">Η ενεργή λίστα δεν είναι Xtream</string>
+    <string name="set_a_account_unavailable">Η λήξη δεν είναι διαθέσιμη· ελέγξτε τη σύνδεση και τα στοιχεία εισόδου</string>
+    <string name="set_a_account_last_checked">Τελευταίος έλεγχος %1$s</string>
 </resources>

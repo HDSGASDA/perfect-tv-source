@@ -26,7 +26,7 @@ object M3uParser {
         val propHeaders = LinkedHashMap<String, String>()
         input.bufferedReader(Charsets.UTF_8).useLines { lines ->
             for (raw in lines) {
-                val line = raw.removePrefix("﻿").trim()
+                val line = raw.removePrefix("\uFEFF").trim()
                 when {
                     line.isEmpty() -> Unit
                     line.startsWith("#EXTINF", ignoreCase = true) -> {

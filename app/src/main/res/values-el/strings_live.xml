@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Επιλογές συγχώνευσης</string>
     <string name="live_menu_merge_options_title">Επιλογές συγχώνευσης · %1$s</string>
     <string name="live_rail_jump_hint">Κρατήστε πάνω: αρχή / προηγούμενη λίστα\nΚρατήστε κάτω: επόμενη λίστα / τέλος</string>
+
+    <string name="live_retry">Επανάληψη</string>
 </resources>

@@ -11,6 +11,17 @@ build/
 *.keystore
 keystore.properties
 
+# Build output and release artefacts: APKs are distributed through the panel, source zips through
+# the public source mirror. Keep them on disk, never in history.
+*.apk
+*.idsig
+*.zip
+release-apk-base64.txt
+serve_release_apk.py
+
+# Vendored upstream drop, kept locally for reference only
+imd-tv-0.7.1/
+
 # Private notes, references and mockups: never committed
 private/
 

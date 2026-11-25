@@ -4,17 +4,28 @@ import android.app.Application
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class IptvApp : Application() {
     lateinit var container: AppContainer
         private set
 
-    override fun attachBaseContext(base: android.content.Context) = super.attachBaseContext(org.imdtv.iptvtv.ui.AppLanguage.wrap(base))
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(org.imdtv.iptvtv.ui.AppLanguage.wrap(base))
+        // Background work (sync workers, the player's loader thread) reads the JVM default locale too.
+        org.imdtv.iptvtv.ui.AppLanguage.applyDefault(this)
+    }
 
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Crash reports are written by the dying process and uploaded on the next start, once settings are readable.
+        org.imdtv.iptvtv.data.diagnostics.CrashStore.install(this) { container.settings.settings.first().crashReportsOn }
+        // Robolectric builds the Application without running manifest ContentProviders, so WorkManager is absent in
+        // unit tests; the same guard as the recording re-arm below keeps start-up usable there.
+        runCatching { org.imdtv.iptvtv.work.CrashReportWorker.schedule(this) }
+            .onFailure { android.util.Log.w("IptvApp", "Crash report upload not scheduled", it) }
         // Once per old playlist: encrypt its login and take it out of saved links (no-op afterwards).
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             org.imdtv.iptvtv.data.support.LogCollector.start(this@IptvApp)

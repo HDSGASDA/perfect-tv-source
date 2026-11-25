@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Żądanie playlisty nie powiodło się: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Oglądanie wstecz</string>
     <string name="set_b_catch_up_expl">Oglądaj minione programy na kanałach, które to oferują. Wyłączone ukrywa ikony zegara, Od początku i minione programy</string>
+
+    <string name="set_b_restore_choose">Wybierz, co przywrócić</string>
+    <string name="set_b_restore_playlist_expl">Przywróć tę playlistę %1$s i jej wybory</string>
+    <string name="set_b_restore_settings">Przywróć ustawienia aplikacji</string>
+    <string name="set_b_restore_settings_expl">Ustawienia motywu, odtwarzania, programu i nagrywania</string>
+    <string name="set_b_restore_continue">Dalej</string>
+    <string name="set_b_restore_continue_expl">Sprawdź dane logowania, zanim coś zostanie zmienione</string>
+    <string name="set_b_update_channel">Aktualizacje aplikacji</string>
+    <string name="set_b_release_notes">Informacje o wydaniu</string>
 </resources>

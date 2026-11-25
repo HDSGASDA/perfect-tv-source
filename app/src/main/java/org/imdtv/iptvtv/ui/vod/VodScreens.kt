@@ -35,6 +35,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -97,7 +98,7 @@ fun VodHomeScreen(vm: VodViewModel, nav: @Composable () -> Unit, onOpen: (VodIte
     var railOpen by remember { mutableStateOf(false) }
     val firstItem = remember { FocusRequester() }
     val railFocus = remember { FocusRequester() }
-    var refocus by remember { mutableStateOf(0) }
+    var refocus by remember { mutableIntStateOf(0) }
     // Rows load asynchronously, so the first poster grabs focus itself once it exists (per tab / grid).
     val wantFirst = remember(kind, gridCat?.id) { mutableStateOf(true) }
 
@@ -345,8 +346,9 @@ fun VodDetailScreen(vm: VodViewModel, item: VodItem, onPlay: (url: String, title
     val favs by vm.favourites.collectAsState()
     val rows by vm.progress.collectAsState()
     val d = details[item.id]
-    val context = androidx.compose.ui.platform.LocalContext.current
-    fun episodeTitle(ep: Episode) = context.getString(R.string.vod_episode_title, item.name, ep.season, ep.number)
+    // stringResource, not context.getString: the episode title must follow an app language change.
+    val episodeFormat = stringResource(R.string.vod_episode_title)
+    fun episodeTitle(ep: Episode) = episodeFormat.format(item.name, ep.season, ep.number)
     val play = remember { FocusRequester() }
     LaunchedEffect(item.id) { vm.loadDetail(item); withFrameNanos { }; runCatching { play.requestFocus() } }
     val fav = favs.any { it.id == item.id }

@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Samenvoegopties</string>
     <string name="live_menu_merge_options_title">Samenvoegopties · %1$s</string>
     <string name="live_rail_jump_hint">Houd omhoog: boven / vorige afspeellijst\nHoud omlaag: volgende afspeellijst / onder</string>
+
+    <string name="live_retry">Opnieuw proberen</string>
 </resources>

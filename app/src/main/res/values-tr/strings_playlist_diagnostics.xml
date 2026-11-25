@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Bağlantıyı test et</string>
+    <string name="set_a_test_playlist_expl">Giriş bilgilerini kontrol eder ve mevcut kanal ile başlıkları sayar</string>
+    <string name="set_a_testing_playlist">Giriş bilgileri ve katalog kontrol ediliyor…</string>
+</resources>

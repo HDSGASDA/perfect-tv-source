@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Testează conexiunea</string>
+    <string name="set_a_test_playlist_expl">Verifică datele de autentificare și numără canalele și titlurile disponibile</string>
+    <string name="set_a_testing_playlist">Se verifică datele de autentificare și catalogul…</string>
+</resources>

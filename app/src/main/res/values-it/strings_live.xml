@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Opzioni di unione</string>
     <string name="live_menu_merge_options_title">Opzioni di unione · %1$s</string>
     <string name="live_rail_jump_hint">Tieni su: inizio / playlist precedente\nTieni giù: playlist successiva / fine</string>
+
+    <string name="live_retry">Riprova</string>
 </resources>

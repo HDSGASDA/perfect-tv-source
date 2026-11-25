@@ -62,7 +62,8 @@ fun PlayerScreen(player: PlayerManager, title: String, liveVm: LiveViewModel? = 
     var failure by remember { mutableStateOf<Pair<Long?, String>?>(null) }
     val shownName by androidx.compose.runtime.rememberUpdatedState(if (live) name else title) // the zapped-to channel, not the first
     // The view model's value, not the composed one: a zap sets it, then plays, before the next recomposition.
-    LaunchedEffect(Unit) { player.errors.collect { failure = liveVm?.focused?.value?.id to context.getString(R.string.live_err_cant_play, shownName, org.imdtv.iptvtv.player.playErrorText(context, it)) } }
+    val cantPlay = stringResource(R.string.live_err_cant_play) // resolved in composition: follows an app language change
+    LaunchedEffect(Unit) { player.errors.collect { failure = liveVm?.focused?.value?.id to cantPlay.format(shownName, org.imdtv.iptvtv.player.playErrorText(context, it)) } }
     val error = failure?.takeIf { it.first == focused?.id }?.second
 
     var overlay by remember { mutableStateOf(false) }

@@ -198,4 +198,10 @@
     <string name="vod_pack_no_space">Espaço insuficiente para importar este pacote</string>
     <string name="vod_pack_no_images">Sem imagens neste zip</string>
     <string name="vod_pack_unreadable">Não foi possível ler este zip</string>
+
+    <string name="vod_rec_filter_empty">Nenhuma gravação neste filtro.</string>
+    <string name="vod_rec_filter_all">Todas</string>
+    <string name="vod_rec_filter_upcoming">Próximas</string>
+    <string name="vod_rec_filter_finished">Concluídas</string>
+    <string name="vod_rec_filter_issues">Problemas</string>
 </resources>

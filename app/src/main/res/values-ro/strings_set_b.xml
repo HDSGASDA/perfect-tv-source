@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Cerere playlist eșuată: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Catch-up</string>
     <string name="set_b_catch_up_expl">Vizionează emisiunile trecute pe canalele care oferă asta. Oprit ascunde pictogramele ceas, De la început și emisiunile trecute</string>
+
+    <string name="set_b_restore_choose">Alege ce să restaurezi</string>
+    <string name="set_b_restore_playlist_expl">Restaurează această listă %1$s și selecțiile ei</string>
+    <string name="set_b_restore_settings">Restaurează setările aplicației</string>
+    <string name="set_b_restore_settings_expl">Setări de temă, redare, ghid și înregistrare</string>
+    <string name="set_b_restore_continue">Continuă</string>
+    <string name="set_b_restore_continue_expl">Verifică datele de autentificare înainte de a se modifica ceva</string>
+    <string name="set_b_update_channel">Actualizări ale aplicației</string>
+    <string name="set_b_release_notes">Note de versiune</string>
 </resources>

@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Échec de la requête de playlist : HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Rattrapage</string>
     <string name="set_b_catch_up_expl">Regardez les programmes passés sur les chaînes qui le proposent. Désactivé masque les icônes d\'horloge, Reprendre au début et les programmes passés</string>
+
+    <string name="set_b_restore_choose">Choisissez ce qui doit être restauré</string>
+    <string name="set_b_restore_playlist_expl">Restaurer cette playlist %1$s et ses choix</string>
+    <string name="set_b_restore_settings">Restaurer les réglages de l\'application</string>
+    <string name="set_b_restore_settings_expl">Réglages de thème, de lecture, de guide et d\'enregistrement</string>
+    <string name="set_b_restore_continue">Continuer</string>
+    <string name="set_b_restore_continue_expl">Vérifier les identifiants avant toute modification</string>
+    <string name="set_b_update_channel">Mises à jour de l\'application</string>
+    <string name="set_b_release_notes">Notes de version</string>
 </resources>

@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Playlist-Anfrage fehlgeschlagen: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Catch-up</string>
     <string name="set_b_catch_up_expl">Vergangene Sendungen auf Sendern ansehen, die das anbieten. Aus blendet die Uhrsymbole, Neustart und vergangene Sendungen aus</string>
+
+    <string name="set_b_restore_choose">Wähle, was wiederhergestellt wird</string>
+    <string name="set_b_restore_playlist_expl">Diese %1$s-Playlist und ihre Auswahlen wiederherstellen</string>
+    <string name="set_b_restore_settings">App-Einstellungen wiederherstellen</string>
+    <string name="set_b_restore_settings_expl">Design-, Wiedergabe-, Programm- und Aufnahme-Einstellungen</string>
+    <string name="set_b_restore_continue">Weiter</string>
+    <string name="set_b_restore_continue_expl">Logins prüfen, bevor etwas geändert wird</string>
+    <string name="set_b_update_channel">App-Updates</string>
+    <string name="set_b_release_notes">Versionshinweise</string>
 </resources>

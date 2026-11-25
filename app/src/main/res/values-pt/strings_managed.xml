@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Servidor configurado: %1$s</string>
+    <string name="managed_server_unknown">Servidor gerenciado</string>
+    <string name="managed_server_removed">Este servidor foi removido ou alterado. Selecione um servidor acima e insira novamente os seus dados de acesso.</string>
+    <string name="managed_saved_retry"> A sua nova seleção de servidor foi salva, mas o carregamento falhou. Verifique os dados de acesso e tente novamente.</string>
+    <string name="managed_notice">Escolha um servidor fornecido pelo seu serviço. Trocar de servidor limpa os campos de acesso. Esta aplicação consulta um painel de gestão separado para anúncios, opções de servidor e atualizações enquanto está aberta. Os seus dados de acesso do provedor não são enviados ao painel de gestão. As atualizações exigem confirmação de instalação.</string>
+    <string name="managed_message_dismiss">Fechar a mensagem</string>
+    <string name="managed_message_sender">Anúncio do serviço</string>
+</resources>

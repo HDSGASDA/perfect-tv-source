@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Το αίτημα λίστας απέτυχε: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Catch-up</string>
     <string name="set_b_catch_up_expl">Δείτε προηγούμενες εκπομπές στα κανάλια που το προσφέρουν. Όταν είναι ανενεργό, κρύβει τα εικονίδια ρολογιού, το «Από την αρχή» και τις προηγούμενες εκπομπές</string>
+
+    <string name="set_b_restore_choose">Επιλέξτε τι θα επαναφερθεί</string>
+    <string name="set_b_restore_playlist_expl">Επαναφορά αυτής της λίστας %1$s και των επιλογών της</string>
+    <string name="set_b_restore_settings">Επαναφορά ρυθμίσεων εφαρμογής</string>
+    <string name="set_b_restore_settings_expl">Ρυθμίσεις θέματος, αναπαραγωγής, οδηγού και εγγραφής</string>
+    <string name="set_b_restore_continue">Συνέχεια</string>
+    <string name="set_b_restore_continue_expl">Ελέγξτε τα στοιχεία σύνδεσης πριν αλλάξει οτιδήποτε</string>
+    <string name="set_b_update_channel">Ενημερώσεις εφαρμογής</string>
+    <string name="set_b_release_notes">Σημειώσεις έκδοσης</string>
 </resources>

@@ -91,6 +91,7 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
     private val instantReplayOn = booleanPreferencesKey("instant_replay_on")
     private val matchRefreshRate = booleanPreferencesKey("match_refresh_rate")
     private val diagnosticsOn = booleanPreferencesKey("diagnostics_on")
+    private val crashReportsOn = booleanPreferencesKey("crash_reports_on")
 
     val settings: Flow<AppSettings> = prefs.data.map { it.toSettings() }.distinctUntilChanged()
 
@@ -175,6 +176,7 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
             instantReplayOn = this[instantReplayOn] ?: d.instantReplayOn,
             matchRefreshRate = this[matchRefreshRate] ?: d.matchRefreshRate,
             diagnosticsOn = this[diagnosticsOn] ?: d.diagnosticsOn,
+            crashReportsOn = this[crashReportsOn] ?: d.crashReportsOn,
         ).clamped()
     }
 
@@ -256,6 +258,7 @@ class SettingsRepository(private val prefs: DataStore<Preferences>) {
         this[instantReplayOn] = s.instantReplayOn
         this[matchRefreshRate] = s.matchRefreshRate
         this[diagnosticsOn] = s.diagnosticsOn
+        this[crashReportsOn] = s.crashReportsOn
     }
 
     private companion object {

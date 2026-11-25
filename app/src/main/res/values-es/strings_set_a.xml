@@ -297,4 +297,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Quitar caracteres especiales</string>
     <string name="set_a_remove_symbols_expl">Quita letras pequeñas o en círculo y símbolos como «ᴿᴬᵂ», «ⓋⒾⓅ» y «◉» de los nombres de canal</string>
+
+    <string name="set_a_account_check">Comprobar el vencimiento de la cuenta</string>
+    <string name="set_a_account_not_checked">Pulsa OK para comprobar la lista activa</string>
+    <string name="set_a_account_checking">Comprobando la lista activa…</string>
+    <string name="set_a_account_no_playlist">No hay lista activa</string>
+    <string name="set_a_account_non_xtream">La lista activa no es Xtream</string>
+    <string name="set_a_account_unavailable">Vencimiento no disponible; comprueba la conexión y los datos de acceso</string>
+    <string name="set_a_account_last_checked">Última comprobación %1$s</string>
 </resources>

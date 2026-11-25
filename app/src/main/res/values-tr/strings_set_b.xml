@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Oynatma listesi isteği başarısız: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Geri izleme</string>
     <string name="set_b_catch_up_expl">Bunu sunan kanallarda geçmiş programları izleyin. Kapalıyken saat simgeleri, Baştan başlat ve geçmiş programlar gizlenir</string>
+
+    <string name="set_b_restore_choose">Neyi geri yükleyeceğinizi seçin</string>
+    <string name="set_b_restore_playlist_expl">Bu %1$s oynatma listesini ve seçimlerini geri yükle</string>
+    <string name="set_b_restore_settings">Uygulama ayarlarını geri yükle</string>
+    <string name="set_b_restore_settings_expl">Tema, oynatma, rehber ve kayıt ayarları</string>
+    <string name="set_b_restore_continue">Devam</string>
+    <string name="set_b_restore_continue_expl">Herhangi bir değişiklik yapılmadan önce giriş bilgilerini gözden geçirin</string>
+    <string name="set_b_update_channel">Uygulama güncellemeleri</string>
+    <string name="set_b_release_notes">Sürüm notları</string>
 </resources>

@@ -50,7 +50,11 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
     var test by remember { mutableStateOf<String?>(null) }
     var free by remember { mutableStateOf<Long?>(null) }
     val drives = remember(s.recordTo) { usbDirs(context) }
-    val str = { id: Int -> context.getString(id) }
+    // Resolved in composition (a lambda over context.getString would not follow an app language change).
+    val plugUsb = stringResource(R.string.vod_rec_plug_usb)
+    val testing = stringResource(R.string.vod_rec_testing)
+    val ok = stringResource(R.string.vod_ok)
+    val testFailed = stringResource(R.string.vod_rec_test_failed)
     LaunchedEffect(Unit) { withFrameNanos { }; runCatching { first.requestFocus() } }
     LaunchedEffect(s.recordingOn, s.recordTo, s.recordUsbPath, s.smbServer, s.smbShare, s.smbFolder, s.smbUser, s.smbPassword) {
         free = null
@@ -66,7 +70,7 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
         val usbLabel = stringResource(if (drives.isEmpty()) R.string.vod_rec_usb_none else R.string.vod_rec_usb)
         ChoiceRow(stringResource(R.string.vod_rec_save_to), stringResource(R.string.vod_rec_save_to_expl), RecStorage.entries, s.recordTo,
             { when (it) { RecStorage.INTERNAL -> stringResource(R.string.vod_rec_store_internal_title); RecStorage.USB -> usbLabel; RecStorage.SMB -> stringResource(R.string.vod_rec_store_smb_title) } }, default = AppSettings().recordTo) { to ->
-            if (to == RecStorage.USB && drives.isEmpty()) vm.notice(str(R.string.vod_rec_plug_usb)) else vm.update { it.copy(recordTo = to) }
+            if (to == RecStorage.USB && drives.isEmpty()) vm.notice(plugUsb) else vm.update { it.copy(recordTo = to) }
         }
         if (s.recordTo == RecStorage.USB && drives.size > 1) {
             val current = drives.firstOrNull { it.path == s.recordUsbPath } ?: drives.first()
@@ -80,8 +84,8 @@ fun RecordingPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequest
             EditRow(stringResource(R.string.vod_rec_password), stringResource(R.string.vod_rec_password_expl), if (s.smbPassword.isEmpty()) stringResource(R.string.vod_rec_not_set) else "••••••", s.smbPassword,
                 keyboard = KeyboardType.Password, secret = true) { v -> vm.update { it.copy(smbPassword = v) } }
             SettingRow(stringResource(R.string.vod_rec_test), stringResource(R.string.vod_rec_test_expl), test) {
-                test = str(R.string.vod_rec_testing)
-                scope.launch { test = vm.testShare(s)?.let { context.getString(R.string.vod_rec_test_failed, it) } ?: str(R.string.vod_ok) }
+                test = testing
+                scope.launch { test = vm.testShare(s)?.let { testFailed.format(it) } ?: ok }
             }
         }
         SettingRow(stringResource(R.string.vod_rec_free_space_title), stringResource(R.string.vod_rec_free_space_expl), free?.let { freeSpaceText(context, it) } ?: "…") {}

@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Richiesta della playlist non riuscita: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Catch-up</string>
     <string name="set_b_catch_up_expl">Guarda i programmi passati sui canali che lo offrono. Disattivato nasconde le icone dell\'orologio, Riavvia e i programmi passati</string>
+
+    <string name="set_b_restore_choose">Scegli cosa ripristinare</string>
+    <string name="set_b_restore_playlist_expl">Ripristina questa playlist %1$s e le sue selezioni</string>
+    <string name="set_b_restore_settings">Ripristina le impostazioni dell\'app</string>
+    <string name="set_b_restore_settings_expl">Impostazioni di tema, riproduzione, guida e registrazione</string>
+    <string name="set_b_restore_continue">Continua</string>
+    <string name="set_b_restore_continue_expl">Controlla le credenziali prima che venga modificato qualcosa</string>
+    <string name="set_b_update_channel">Aggiornamenti dell\'app</string>
+    <string name="set_b_release_notes">Note di rilascio</string>
 </resources>

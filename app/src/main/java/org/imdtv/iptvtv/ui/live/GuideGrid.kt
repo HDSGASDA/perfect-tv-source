@@ -170,8 +170,12 @@ fun GuideGrid(
     if (move != null && !move.dropped) androidx.compose.ui.window.Popup(alignment = Alignment.BottomCenter) {
         org.imdtv.iptvtv.ui.InfoBar(stringResource(R.string.live_row_move_hint), Modifier.padding(bottom = 40.dp))
     }
-    if (merging != null) androidx.compose.ui.window.Popup(alignment = Alignment.BottomCenter) {
-        org.imdtv.iptvtv.ui.InfoBar(stringResource(R.string.live_row_merge_hint, merging.ch.displayName(vm.strip.value)), Modifier.padding(bottom = 40.dp))
+    if (merging != null) {
+        // Collected, not read from .value: the hint must follow the Remove special characters setting while it is up.
+        val stripNames by vm.strip.collectAsState()
+        androidx.compose.ui.window.Popup(alignment = Alignment.BottomCenter) {
+            org.imdtv.iptvtv.ui.InfoBar(stringResource(R.string.live_row_merge_hint, merging.ch.displayName(stripNames)), Modifier.padding(bottom = 40.dp))
+        }
     }
     val programmes by vm.programmes.collectAsState()
     val now by vm.now.collectAsState()

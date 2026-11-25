@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Server eingerichtet: %1$s</string>
+    <string name="managed_server_unknown">Verwalteter Server</string>
+    <string name="managed_server_removed">Dieser Server wurde entfernt oder geändert. Wähle oben einen Server und gib dein Login erneut ein.</string>
+    <string name="managed_saved_retry"> Deine neue Serverauswahl wurde gespeichert, aber das Laden ist fehlgeschlagen. Prüfe das Login und versuche es erneut.</string>
+    <string name="managed_notice">Wähle einen Server, den dein Anbieter vorgibt. Beim Serverwechsel werden die Login-Felder geleert. Diese App fragt während des Betriebs ein separates Verwaltungspanel nach Ankündigungen, Serverauswahl und App-Updates ab. Dein Anbieter-Login wird nicht an das Verwaltungspanel gesendet. Updates müssen bei der Installation bestätigt werden.</string>
+    <string name="managed_message_dismiss">Meldung schließen</string>
+    <string name="managed_message_sender">Ankündigung des Anbieters</string>
+</resources>

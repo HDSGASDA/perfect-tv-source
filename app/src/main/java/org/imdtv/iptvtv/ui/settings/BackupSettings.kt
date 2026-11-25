@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -93,7 +94,7 @@ private fun RestoreForm(b: Backup, vm: SettingsViewModel, park: () -> Unit, onCa
     var selected by selectedState
     var includeSettings by remember(b) { mutableStateOf(true) }
     val asks = remember(b, selected) { b.playlists.indices.filter { it in selected && needsLogin(b.playlists[it]) && !vm.hasSavedLogin(b.playlists[it]) } }
-    var step by remember(b, selected) { mutableStateOf(-1) }
+    var step by remember(b, selected) { mutableIntStateOf(-1) }
     val logins = remember(b) { mutableStateMapOf<Int, Pair<String, String>>() }
     val firstRow = remember { FocusRequester() }
     LaunchedEffect(step) { withFrameNanos { }; runCatching { firstRow.requestFocus() } }

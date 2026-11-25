@@ -27,8 +27,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -211,7 +213,7 @@ private fun CategoryListPage(vm: SettingsViewModel, kind: Kind, first: FocusRequ
     /** Toggles pressed but not yet written back by the database: category id → hidden. */
     val pending = remember { androidx.compose.runtime.mutableStateMapOf<Long, Boolean>() }
     var moving by remember { mutableStateOf<Long?>(null) }
-    var movedFrom by remember { mutableStateOf(0) }
+    var movedFrom by remember { mutableIntStateOf(0) }
     BackHandler(enabled = moving == null, onBack = onClose)
     val list = rememberLazyListState()
     val movingIndex = rows.indexOfFirst { it.category.id == moving }
@@ -295,6 +297,8 @@ private fun ManageChannelsPage(vm: SettingsViewModel, first: FocusRequester, onC
     val cat = open
     if (cat == null) {
         val list = rememberLazyListState(cats.indexOfFirst { it.category.id == cameFrom }.coerceAtLeast(0))
+        // derivedStateOf: reading firstVisibleItemIndex directly recomposes this whole list on every scroll frame.
+        val topRow by remember(list) { derivedStateOf { list.firstVisibleItemIndex } }
         if (cats.isEmpty()) Text(stringResource(R.string.set_a_no_categories), fontSize = 15.sp, color = LocalTheme.current.colors.muted)
         LazyColumn(state = list, verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // `first` (where Right from the section list lands) goes on the first row on screen: a row scrolled out of a
@@ -302,7 +306,7 @@ private fun ManageChannelsPage(vm: SettingsViewModel, first: FocusRequester, onC
             itemsIndexed(cats, key = { _, r -> r.category.id }) { i, r ->
                 val m = if (r.category.id == cameFrom) Modifier.focusRequester(back) else Modifier
                 SettingRow(r.category.name.ifEmpty { stringResource(R.string.set_a_uncategorised) }, stringResource(R.string.set_a_n_shown, r.count), "›",
-                    if (i == list.firstVisibleItemIndex) m.focusRequester(first) else m) { go(r.category) }
+                    if (i == topRow) m.focusRequester(first) else m) { go(r.category) }
             }
         }
         return
@@ -339,8 +343,10 @@ private fun ManageChannelsPage(vm: SettingsViewModel, first: FocusRequester, onC
     }
     // Hold OK picks a channel up (as Manage provider categories' move): Up/Down carry it, OK drops it, Back puts it back.
     var moving by remember(cat.id) { mutableStateOf<Long?>(null) }
-    var movedFrom by remember(cat.id) { mutableStateOf(0) }
+    var movedFrom by remember(cat.id) { mutableIntStateOf(0) }
     val list = rememberLazyListState()
+    // Only the index matters for where `first` goes; derivedStateOf keeps scroll offsets out of composition.
+    val topRow by remember(list) { derivedStateOf { list.firstVisibleItemIndex } }
     val movingIndex = channels.indexOfFirst { it.id == moving }
     // Keep the row being moved on screen (+2 for the title and button rows above it).
     LaunchedEffect(movingIndex) {
@@ -360,7 +366,7 @@ private fun ManageChannelsPage(vm: SettingsViewModel, first: FocusRequester, onC
             SettingRow(if (selecting) stringResource(R.string.set_a_hide_or_show) else stringResource(R.string.set_a_select_channels),
                 if (!selecting) stringResource(R.string.set_a_select_channels_expl)
                 else if (n == 0) stringResource(R.string.set_a_tick_channels_hint) else pluralStringResource(R.plurals.set_a_hide_or_show_ticked, n, n),
-                null, (if (list.firstVisibleItemIndex <= 1) Modifier.focusRequester(first) else Modifier).focusProperties { canFocus = moving == null }) {
+                null, (if (topRow <= 1) Modifier.focusRequester(first) else Modifier).focusProperties { canFocus = moving == null }) {
                 if (!selecting) selecting = true else if (n == 0) noneTicked = true else choose = true
             }
         }
@@ -381,7 +387,7 @@ private fun ManageChannelsPage(vm: SettingsViewModel, first: FocusRequester, onC
                 },
                 // canFocus reads `moving` itself: a captured value is stale when the lambda re-runs.
                 // Scrolled past the Select row: `first` moves to the first channel on screen (items 0 and 1 are the title and Select).
-                modifier = (if (list.firstVisibleItemIndex > 1 && i == list.firstVisibleItemIndex - 2) Modifier.focusRequester(first) else Modifier)
+                modifier = (if (topRow > 1 && i == topRow - 2) Modifier.focusRequester(first) else Modifier)
                     .focusProperties { canFocus = moving == null || moving == ch.id }
                     .onLongOk { if (!selecting && moving == null) { moving = ch.id; movedFrom = channels.indexOfFirst { it.id == ch.id } } }
                     .onPreviewKeyEvent { e ->

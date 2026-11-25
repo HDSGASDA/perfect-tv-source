@@ -69,7 +69,10 @@ fun SyncPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequester, o
     val problem by sync.problem.collectAsState()
     val pulling by sync.pulling.collectAsState()
     val scope = rememberCoroutineScope()
-    val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Resolved in composition so the notices follow an app language change (context.getString would not).
+    val cantReach = stringResource(R.string.set_b_cant_reach)
+    val paired = stringResource(R.string.set_b_paired)
+    val wrongCode = stringResource(R.string.set_b_wrong_code)
     val muted = LocalTheme.current.colors.muted
     var limits by remember { mutableStateOf<SyncRole?>(null) }
     var setup by remember { mutableStateOf<SyncRole?>(null) }
@@ -111,7 +114,7 @@ fun SyncPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequester, o
                 found.forEach { b ->
                     SettingRow(b.name, stringResource(R.string.set_b_master_on_network), null) {
                         scope.launch {
-                            if (sync.hello(b)) chosen = b else { chosen = null; vm.notice(ctx.getString(R.string.set_b_cant_reach, b.name)) }
+                            if (sync.hello(b)) chosen = b else { chosen = null; vm.notice(cantReach.format(b.name)) }
                         }
                     }
                 }
@@ -119,8 +122,8 @@ fun SyncPage(vm: SettingsViewModel, modifier: Modifier, first: FocusRequester, o
                 chosen?.let { b -> key(b) {
                     EditRow(stringResource(R.string.set_b_code_shown, b.name), stringResource(R.string.set_b_code_expl), stringResource(R.string.set_b_not_set), "", keyboard = KeyboardType.Number, saveLabel = stringResource(R.string.set_b_pair)) { code ->
                         scope.launch {
-                            if (sync.pair(b, code.trim())) { parkMaster(); listing = false; chosen = null; vm.notice(ctx.getString(R.string.set_b_paired, b.name)) }
-                            else vm.notice(ctx.getString(R.string.set_b_wrong_code))
+                            if (sync.pair(b, code.trim())) { parkMaster(); listing = false; chosen = null; vm.notice(paired.format(b.name)) }
+                            else vm.notice(wrongCode)
                         }
                     }
                 } }

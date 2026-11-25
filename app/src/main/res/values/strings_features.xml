@@ -81,6 +81,8 @@
     <!-- Diagnostics -->
     <string name="set_b_diagnostics">Send playback diagnostics</string>
     <string name="set_b_diagnostics_expl">Share anonymous stall and error totals with your service\'s panel to help find bad channels; no account details</string>
+    <string name="set_b_crash_reports">Send crash reports</string>
+    <string name="set_b_crash_reports_expl">When the app closes unexpectedly, send the error and the box model to your service\'s panel so it can be fixed; no account details or channel names</string>
     <!-- Backup stream -->
     <string name="live_menu_backup">Backup stream…</string>
     <string name="live_menu_backup_title">Backup stream for %1$s</string>

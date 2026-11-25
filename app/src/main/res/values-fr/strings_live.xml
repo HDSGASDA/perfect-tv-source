@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Options de fusion</string>
     <string name="live_menu_merge_options_title">Options de fusion · %1$s</string>
     <string name="live_rail_jump_hint">Maintenir haut : début / playlist précédente\nMaintenir bas : playlist suivante / fin</string>
+
+    <string name="live_retry">Réessayer</string>
 </resources>

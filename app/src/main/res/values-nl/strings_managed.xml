@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Server ingesteld: %1$s</string>
+    <string name="managed_server_unknown">Beheerde server</string>
+    <string name="managed_server_removed">Deze server is verwijderd of gewijzigd. Kies hierboven een server en voer je inloggegevens opnieuw in.</string>
+    <string name="managed_saved_retry"> Je nieuwe serverkeuze is opgeslagen, maar het laden is mislukt. Controleer de inloggegevens en probeer opnieuw.</string>
+    <string name="managed_notice">Kies een server die je dienst aanbiedt. Bij het wisselen van server worden de inlogvelden gewist. Deze app controleert zolang hij open is een apart beheerpaneel op aankondigingen, serverkeuzes en app-updates. Je inloggegevens van de aanbieder worden niet naar het beheerpaneel gestuurd. Updates vereisen een installatiebevestiging.</string>
+    <string name="managed_message_dismiss">Bericht sluiten</string>
+    <string name="managed_message_sender">Aankondiging van de dienst</string>
+</resources>

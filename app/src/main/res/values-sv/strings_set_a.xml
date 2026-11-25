@@ -297,4 +297,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Ta bort specialtecken</string>
     <string name="set_a_remove_symbols_expl">Ta bort små och inringade bokstäver och symboler som ”ᴿᴬᵂ”, ”ⓋⒾⓅ” och ”◉” från kanalnamn</string>
+
+    <string name="set_a_account_check">Kontrollera kontots utgångsdatum</string>
+    <string name="set_a_account_not_checked">Tryck på OK för att kontrollera den aktiva spellistan</string>
+    <string name="set_a_account_checking">Kontrollerar den aktiva spellistan…</string>
+    <string name="set_a_account_no_playlist">Ingen aktiv spellista</string>
+    <string name="set_a_account_non_xtream">Den aktiva spellistan är inte Xtream</string>
+    <string name="set_a_account_unavailable">Utgångsdatum saknas; kontrollera anslutningen och inloggningen</string>
+    <string name="set_a_account_last_checked">Senast kontrollerad %1$s</string>
 </resources>

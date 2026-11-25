@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Error en la solicitud de la lista: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Reemisión</string>
     <string name="set_b_catch_up_expl">Ver programas ya emitidos en los canales que lo ofrecen. Desactivado oculta los iconos de reloj, Reiniciar y los programas pasados</string>
+
+    <string name="set_b_restore_choose">Elige qué quieres restaurar</string>
+    <string name="set_b_restore_playlist_expl">Restaurar esta lista %1$s y sus selecciones</string>
+    <string name="set_b_restore_settings">Restaurar los ajustes de la aplicación</string>
+    <string name="set_b_restore_settings_expl">Ajustes de tema, reproducción, guía y grabación</string>
+    <string name="set_b_restore_continue">Continuar</string>
+    <string name="set_b_restore_continue_expl">Revisar los datos de acceso antes de cambiar nada</string>
+    <string name="set_b_update_channel">Actualizaciones de la aplicación</string>
+    <string name="set_b_release_notes">Notas de la versión</string>
 </resources>

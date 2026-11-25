@@ -31,6 +31,8 @@ class RecordingService : Service() {
     private val jobs = HashMap<Long, Job>() // main thread only
     private var wake: PowerManager.WakeLock? = null
     private var wifi: WifiManager.WifiLock? = null
+    /** The scheduled ends of the recordings holding the locks, so a later, longer one extends them. */
+    private val lockEnds = HashMap<Long, Long>() // main thread only
     private val container get() = (application as IptvApp).container
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -60,7 +62,8 @@ class RecordingService : Service() {
                 return@launch
             }
             container.db.recordingDao().get(id)?.let { r -> repo.running.update { it + (id to r) } }
-            withContext(Dispatchers.Main) { holdLocks(s.keepAwake); notify(repo.running.value.values.map { it.title }) }
+            val endsAt = container.db.recordingDao().get(id)?.scheduledEnd ?: System.currentTimeMillis()
+            withContext(Dispatchers.Main) { holdLocks(s.keepAwake, id, endsAt); notify(repo.running.value.values.map { it.title }) }
             val status = runRecording(id, container.db, store, StreamCapture(container.http),
                 otherStreams = { repo.running.value.size > 1 || container.isWatching() }, resolve = container.stalkerLinks::resolve)
             container.db.recordingDao().get(id)?.let { r ->
@@ -69,7 +72,7 @@ class RecordingService : Service() {
         }.also { job ->
             job.invokeOnCompletion {
                 repo.running.update { it - id }
-                scope.launch(Dispatchers.Main) { jobs.remove(id); finishIfIdle(); if (jobs.isNotEmpty()) notify(repo.running.value.values.map { it.title }) }
+                scope.launch(Dispatchers.Main) { jobs.remove(id); lockEnds.remove(id); finishIfIdle(); if (jobs.isNotEmpty()) notify(repo.running.value.values.map { it.title }) }
             }
         }
     }
@@ -81,16 +84,26 @@ class RecordingService : Service() {
         stopSelf()
     }
 
-    private fun holdLocks(keepAwake: Boolean) {
-        if (!keepAwake || wake != null) return
-        wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "imdtv:recording").apply { acquire() }
+    /**
+     * Held until the last recording's scheduled end plus a margin, never indefinitely: if the process is killed without
+     * [onDestroy] running, the OS releases them instead of keeping the box awake for good. A later, longer recording
+     * re-acquires with the new timeout. The capture itself always ends at its deadline (60s read timeout per attempt).
+     */
+    private fun holdLocks(keepAwake: Boolean, id: Long, endsAt: Long) {
+        if (!keepAwake) return
+        lockEnds[id] = endsAt
+        val timeout = (lockEnds.values.max() - System.currentTimeMillis() + LOCK_MARGIN_MS).coerceAtLeast(LOCK_MARGIN_MS)
+        if (wake == null) wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "imdtv:recording")
+        wake?.acquire(timeout)
         @Suppress("DEPRECATION")
         val mode = if (Build.VERSION.SDK_INT >= 29) WifiManager.WIFI_MODE_FULL_LOW_LATENCY else WifiManager.WIFI_MODE_FULL_HIGH_PERF
-        wifi = runCatching { applicationContext.getSystemService(WifiManager::class.java).createWifiLock(mode, "imdtv:recording").apply { acquire() } }
+        if (wifi == null) wifi = runCatching { applicationContext.getSystemService(WifiManager::class.java).createWifiLock(mode, "imdtv:recording") }
             .onFailure { Log.w("IptvRecord", "no Wi-Fi lock: $it") }.getOrNull()
+        wifi?.acquire()
     }
 
     private fun releaseLocks() {
+        lockEnds.clear()
         wake?.let { if (it.isHeld) it.release() }; wake = null
         wifi?.let { if (it.isHeld) it.release() }; wifi = null
     }
@@ -117,6 +130,8 @@ class RecordingService : Service() {
         private const val ACTION_START = "org.imdtv.iptvtv.recording.RUN"
         private const val ACTION_STOP = "org.imdtv.iptvtv.recording.STOP"
         private const val EXTRA_ID = "id"
+        /** Past the last scheduled end: the capture's own retries (60s) and final write fit inside this. */
+        private const val LOCK_MARGIN_MS = 10 * 60_000L
         private const val CHANNEL = "recording"
 
         fun start(context: Context, id: Long) = Intent(context, RecordingService::class.java).setAction(ACTION_START).putExtra(EXTRA_ID, id).let {

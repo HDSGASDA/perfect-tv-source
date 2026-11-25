@@ -253,4 +253,13 @@
     <string name="set_b_m3u_request_failed">Playlistverzoek mislukt: HTTP %1$d %2$s</string>
     <string name="set_b_catch_up">Terugkijken</string>
     <string name="set_b_catch_up_expl">Bekijk eerdere programma\'s op zenders die dat bieden. Uit verbergt de klokpictogrammen, Opnieuw starten en eerdere programma\'s</string>
+
+    <string name="set_b_restore_choose">Kies wat je wilt herstellen</string>
+    <string name="set_b_restore_playlist_expl">Deze %1$s-afspeellijst en de bijbehorende keuzes herstellen</string>
+    <string name="set_b_restore_settings">App-instellingen herstellen</string>
+    <string name="set_b_restore_settings_expl">Instellingen voor thema, afspelen, gids en opnemen</string>
+    <string name="set_b_restore_continue">Doorgaan</string>
+    <string name="set_b_restore_continue_expl">Inloggegevens controleren voordat er iets wordt gewijzigd</string>
+    <string name="set_b_update_channel">App-updates</string>
+    <string name="set_b_release_notes">Releaseopmerkingen</string>
 </resources>

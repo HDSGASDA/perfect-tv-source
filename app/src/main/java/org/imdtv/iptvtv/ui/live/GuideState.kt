@@ -7,6 +7,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -23,8 +24,8 @@ class GuideState internal constructor(
     /** False for a layout with no preview (Retro): OK goes straight to full screen and autoplay is off. */
     private val previews: Boolean,
 ) {
-    var focusIndex by mutableStateOf(startRow)
-    internal var refocusTick by mutableStateOf(0)
+    var focusIndex by mutableIntStateOf(startRow)
+    internal var refocusTick by mutableIntStateOf(0)
     // Set when an action removes the focused row; once the list updates, focus the row now at that index.
     var refocusOnChange by mutableStateOf(false)
     var previewing by mutableStateOf(previewing)

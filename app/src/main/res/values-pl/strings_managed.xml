@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Skonfigurowano serwer: %1$s</string>
+    <string name="managed_server_unknown">Serwer zarządzany</string>
+    <string name="managed_server_removed">Ten serwer został usunięty lub zmieniony. Wybierz serwer powyżej i wprowadź ponownie dane logowania.</string>
+    <string name="managed_saved_retry"> Twój nowy wybór serwera został zapisany, ale wczytywanie nie powiodło się. Sprawdź dane logowania i spróbuj ponownie.</string>
+    <string name="managed_notice">Wybierz serwer udostępniony przez twoją usługę. Zmiana serwera czyści pola logowania. Ta aplikacja sprawdza oddzielny panel zarządzania pod kątem ogłoszeń, wyboru serwerów i aktualizacji, gdy jest otwarta. Dane logowania do dostawcy nie są wysyłane do panelu zarządzania. Aktualizacje wymagają potwierdzenia instalacji.</string>
+    <string name="managed_message_dismiss">Zamknij komunikat</string>
+    <string name="managed_message_sender">Ogłoszenie usługi</string>
+</resources>

@@ -141,4 +141,79 @@ class MigrationTest {
             }
         }
     }
+/** The steps added since the managed releases: renames, offsets, merges and the global merge settings. */
+    @Test fun v14ToV19KeepsChannelEditsAndAddsMergeSettings() {
+        helper.createDatabase(DB, 14).use { db ->
+            db.execSQL("INSERT INTO provider (id,name,type,url,username,password,userAgent,streamFormat,epgOverrideUrls,lastSync,nameStrip,categoryStrip,maxConnections,contentOff) VALUES (1,'p','M3U','http://x',NULL,NULL,NULL,'TS','',NULL,'','',NULL,'')")
+            db.execSQL("INSERT INTO category (id,providerId,kind,remoteId,name,sortOrder,hidden,locked,pinned,country) VALUES (1,1,'LIVE','10','News',0,1,0,0,'GB')")
+            db.execSQL("INSERT INTO channel (id,providerId,categoryId,remoteId,name,customName,logo,customLogo,number,customNumber,hidden,tvgId,epgChannelId,epgOffsetMinutes,streamUrl,sortOrder) VALUES (1,1,1,'r','BBC One',NULL,NULL,NULL,7,NULL,1,NULL,NULL,NULL,'http://s',NULL)")
+        }
+        helper.runMigrationsAndValidate(DB, 19, true).use { db ->
+            db.query("SELECT name, customNumber, hidden, epgOffsetMinutes FROM channel WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("BBC One", c.getString(0)); assertEquals(1, c.getInt(2))
+            }
+            db.query("SELECT name, mergeDuplicates FROM provider WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("p", c.getString(0))
+            }
+        }
+    }
+
+    /** 19 -> 20 moves the merge settings out of the playlist row: the playlist and its channels must survive it. */
+    @Test fun v19ToV20DropsPerPlaylistMergeSettingsAndKeepsRows() {
+        helper.createDatabase(DB, 19).use { db ->
+            db.execSQL("INSERT INTO provider (id,name,type,url,username,password,userAgent,streamFormat,epgOverrideUrls,lastSync,nameStrip,categoryStrip,maxConnections,contentOff,mergeDuplicates,mergeBy,mergeAcross) VALUES (1,'p','M3U','http://x','u','pw',NULL,'TS','',NULL,'UK|','',NULL,'',1,'NAME',0)")
+            db.execSQL("INSERT INTO category (id,providerId,kind,remoteId,name,sortOrder,hidden,locked,pinned,country) VALUES (1,1,'LIVE','10','News',0,0,0,0,'GB')")
+            db.execSQL("INSERT INTO channel (id,providerId,categoryId,remoteId,name,customName,logo,customLogo,number,customNumber,hidden,tvgId,epgChannelId,epgOffsetMinutes,streamUrl,sortOrder) VALUES (1,1,1,'r','BBC One','My BBC',NULL,NULL,7,7,1,NULL,NULL,30,'http://s',2)")
+        }
+        helper.runMigrationsAndValidate(DB, 20, true).use { db ->
+            db.query("SELECT username, password, nameStrip FROM provider WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("u", c.getString(0)); assertEquals("pw", c.getString(1)); assertEquals("UK|", c.getString(2))
+            }
+            db.query("SELECT customName, customNumber, epgOffsetMinutes, hidden, sortOrder FROM channel WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("My BBC", c.getString(0)); assertEquals(7, c.getInt(1)); assertEquals(30, c.getInt(2)); assertEquals(1, c.getInt(3)); assertEquals(2, c.getInt(4))
+            }
+            db.query("PRAGMA table_info(provider)").use { c ->
+                val names = ArrayList<String>(); while (c.moveToNext()) names += c.getString(c.getColumnIndexOrThrow("name"))
+                assertTrue("merge columns must be gone", names.none { it in setOf("mergeDuplicates", "mergeBy", "mergeAcross") })
+            }
+        }
+    }
+
+    @Test fun v21ToV22KeepsPlaylistsAndChannels() {
+        helper.createDatabase(DB, 21).use { db ->
+            db.execSQL("INSERT INTO provider (id,name,type,url,username,password,userAgent,streamFormat,epgOverrideUrls,lastSync,nameStrip,categoryStrip,maxConnections,contentOff,enabled,mergeOn,managedServerId) VALUES (1,'p','XTREAM','https://x','u','pw',NULL,'TS','',NULL,'','',2,'',1,1,'srv')")
+            db.execSQL("INSERT INTO category (id,providerId,kind,remoteId,name,sortOrder,hidden,locked,pinned,country) VALUES (1,1,'LIVE','10','News',0,0,0,0,'GB')")
+            db.execSQL("INSERT INTO channel (id,providerId,categoryId,remoteId,name,customName,logo,customLogo,number,customNumber,hidden,tvgId,epgChannelId,epgOffsetMinutes,streamUrl,sortOrder) VALUES (1,1,1,'r','BBC One',NULL,NULL,NULL,7,NULL,0,NULL,NULL,NULL,'http://s',NULL)")
+        }
+        helper.runMigrationsAndValidate(DB, 22, true).use { db ->
+            db.query("SELECT managedServerId, username, maxConnections FROM provider WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("srv", c.getString(0)); assertEquals("u", c.getString(1)); assertEquals(2, c.getInt(2))
+            }
+            db.query("SELECT count(*) FROM channel").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
+        }
+    }
+
+    /**
+     * A customer on the oldest released database updating to this build: every step in one go, with a playlist,
+     * category and channel present throughout. Room picks the longest path (11 -> 14), so this also proves the
+     * shortcut does not lose the columns the later steps expect.
+     */
+    @Test fun v1ToCurrentKeepsAPlaylistThroughEveryStep() {
+        helper.createDatabase(DB, 1).use { db ->
+            db.execSQL("INSERT INTO provider (id,name,type,url,username,password,userAgent,streamFormat,epgOverrideUrls,lastSync) VALUES (1,'My list','XTREAM','http://x','user','secret',NULL,'TS','',NULL)")
+            db.execSQL("INSERT INTO category (id,providerId,kind,remoteId,name,sortOrder,hidden,locked,pinned) VALUES (1,1,'LIVE','10','UK| News',3,1,0,0)")
+            db.execSQL("INSERT INTO channel (id,providerId,categoryId,remoteId,name,logo,number,hidden,tvgId,streamUrl) VALUES (1,1,1,'101','BBC One','l.png',7,1,'bbc.one','http://s')")
+        }
+        helper.runMigrationsAndValidate(DB, 22, true, AppDatabase.MIGRATION_11_14, AppDatabase.MIGRATION_20_21).use { db ->
+            db.query("SELECT name, username, password FROM provider WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("My list", c.getString(0)); assertEquals("user", c.getString(1)); assertEquals("secret", c.getString(2))
+            }
+            db.query("SELECT name, hidden, sortOrder FROM category WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("UK| News", c.getString(0)); assertEquals(1, c.getInt(1)); assertEquals(3, c.getInt(2))
+            }
+            db.query("SELECT name, number, hidden, streamUrl FROM channel WHERE id = 1").use { c ->
+                c.moveToFirst(); assertEquals("BBC One", c.getString(0)); assertEquals(7, c.getInt(1)); assertEquals(1, c.getInt(2)); assertEquals("http://s", c.getString(3))
+            }
+        }
+    }
 }

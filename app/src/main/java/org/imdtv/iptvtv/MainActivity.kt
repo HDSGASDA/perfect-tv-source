@@ -76,6 +76,7 @@ class MainActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: android.content.Context) {
         super.attachBaseContext(org.imdtv.iptvtv.ui.AppLanguage.wrap(newBase))
         org.imdtv.iptvtv.ui.namesLocale = resources.configuration.locales[0].let { if (it.language == "en") java.util.Locale.UK else it }
+        org.imdtv.iptvtv.ui.AppLanguage.applyDefault(this)
     }
 
     private val app: AppViewModel by viewModels()

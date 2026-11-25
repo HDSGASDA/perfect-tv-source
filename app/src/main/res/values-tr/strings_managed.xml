@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Sunucu yapılandırıldı: %1$s</string>
+    <string name="managed_server_unknown">Yönetilen sunucu</string>
+    <string name="managed_server_removed">Bu sunucu kaldırıldı veya değiştirildi. Yukarıdan bir sunucu seçin ve giriş bilgilerinizi yeniden girin.</string>
+    <string name="managed_saved_retry"> Yeni sunucu seçiminiz kaydedildi, ancak yükleme başarısız oldu. Giriş bilgilerini kontrol edip yeniden deneyin.</string>
+    <string name="managed_notice">Hizmetinizin sağladığı bir sunucu seçin. Sunucu değiştirmek giriş alanlarını temizler. Bu uygulama açıkken duyurular, sunucu seçenekleri ve uygulama güncellemeleri için ayrı bir yönetim panelini kontrol eder. Sağlayıcı giriş bilgileriniz yönetim paneline gönderilmez. Güncellemeler kurulum onayı gerektirir.</string>
+    <string name="managed_message_dismiss">Mesajı kapat</string>
+    <string name="managed_message_sender">Hizmet duyurusu</string>
+</resources>

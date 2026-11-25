@@ -188,4 +188,10 @@
     <string name="vod_pack_no_space">Niet genoeg ruimte om dit pakket te importeren</string>
     <string name="vod_pack_no_images">Geen afbeeldingen in deze zip</string>
     <string name="vod_pack_unreadable">Deze zip kon niet worden gelezen</string>
+
+    <string name="vod_rec_filter_empty">Geen opnames in dit filter.</string>
+    <string name="vod_rec_filter_all">Alle</string>
+    <string name="vod_rec_filter_upcoming">Gepland</string>
+    <string name="vod_rec_filter_finished">Voltooid</string>
+    <string name="vod_rec_filter_issues">Problemen</string>
 </resources>

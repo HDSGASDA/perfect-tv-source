@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Testa anslutningen</string>
+    <string name="set_a_test_playlist_expl">Kontrollerar inloggningen och räknar tillgängliga kanaler och titlar</string>
+    <string name="set_a_testing_playlist">Kontrollerar inloggning och katalog…</string>
+</resources>

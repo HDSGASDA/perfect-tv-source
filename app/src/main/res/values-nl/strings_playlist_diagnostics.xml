@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Verbinding testen</string>
+    <string name="set_a_test_playlist_expl">Controleert de inloggegevens en telt beschikbare kanalen en titels</string>
+    <string name="set_a_testing_playlist">Inloggegevens en catalogus controleren…</string>
+</resources>

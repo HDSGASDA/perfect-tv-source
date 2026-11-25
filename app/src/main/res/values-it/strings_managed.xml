@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="managed_server_configured">Server configurato: %1$s</string>
+    <string name="managed_server_unknown">Server gestito</string>
+    <string name="managed_server_removed">Questo server è stato rimosso o modificato. Seleziona un server qui sopra e inserisci di nuovo le credenziali.</string>
+    <string name="managed_saved_retry"> La tua nuova selezione del server è stata salvata, ma il caricamento non è riuscito. Controlla le credenziali e riprova.</string>
+    <string name="managed_notice">Scegli un server fornito dal tuo servizio. Cambiare server cancella i campi di accesso. Questa app consulta un pannello di gestione separato per annunci, scelte di server e aggiornamenti mentre è aperta. Le credenziali del provider non vengono inviate al pannello di gestione. Gli aggiornamenti richiedono la conferma dell\'installazione.</string>
+    <string name="managed_message_dismiss">Chiudi il messaggio</string>
+    <string name="managed_message_sender">Annuncio del servizio</string>
+</resources>

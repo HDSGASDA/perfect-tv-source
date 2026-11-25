@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Sammanslagning</string>
     <string name="live_menu_merge_options_title">Sammanslagning · %1$s</string>
     <string name="live_rail_jump_hint">Håll upp: toppen / föregående spellista\nHåll ner: nästa spellista / botten</string>
+
+    <string name="live_retry">Försök igen</string>
 </resources>

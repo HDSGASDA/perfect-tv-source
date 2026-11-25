@@ -31,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -156,7 +157,7 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
 
     // How far the open page has scrolled (px, <= 0): the logo shows only at the top, so rows never pass under it.
     // Every page's list reports through nested scroll; a new page starts at the top.
-    val scrolled = remember { mutableStateOf(0f) }
+    val scrolled = remember { mutableFloatStateOf(0f) }
     LaunchedEffect(group, page, playlist, sourcesOpen, recordingOpen, syncOpen, backupOpen) { scrolled.value = 0f }
     val scrollWatch = remember {
         object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
@@ -270,6 +271,9 @@ fun SettingsScreen(vm: SettingsViewModel, onAddPlaylist: () -> Unit, onEditPlayl
                         if (org.imdtv.iptvtv.BuildConfig.MANAGED) SwitchRow(stringResource(R.string.set_b_diagnostics), stringResource(R.string.set_b_diagnostics_expl), s.diagnosticsOn) { on ->
                             vm.update { it.copy(diagnosticsOn = on) }
                         }
+                        if (org.imdtv.iptvtv.BuildConfig.MANAGED) SwitchRow(stringResource(R.string.set_b_crash_reports), stringResource(R.string.set_b_crash_reports_expl), s.crashReportsOn) { on ->
+                            vm.update { it.copy(crashReportsOn = on) }
+                        }
                     }
                     SettingsGroup.PARENTAL -> {
                         val parental = ChannelPage.PARENTAL
@@ -328,7 +332,10 @@ fun SubtitleRows(vm: SettingsViewModel, first: FocusRequester) {
         vm.update { it.copy(subtitlesOn = on) }
     }
     if (s.subtitlesOn) {
-        val tv = java.util.Locale.getDefault().displayLanguage
+        // The app's own locale, from the composition's configuration: Locale.getDefault() keeps the system language
+        // when the app language was changed, and is not Compose state, so the label would not follow a change.
+        val config = androidx.compose.ui.platform.LocalConfiguration.current
+        val tv = remember(config) { (config.locales[0] ?: java.util.Locale.getDefault()).displayLanguage }
         ChoiceRow(stringResource(R.string.set_b_movies_series_lang), stringResource(R.string.set_b_movies_series_lang_expl),
             listOf<String?>(null) + org.imdtv.iptvtv.data.settings.SUBTITLE_LANGUAGES.sortedBy { java.util.Locale(it).displayLanguage },
             s.subtitleLanguage, { c -> c?.let { java.util.Locale(it).displayLanguage } ?: stringResource(R.string.set_b_tv_language, tv) }, default = AppSettings().subtitleLanguage) { l ->

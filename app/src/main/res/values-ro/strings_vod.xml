@@ -190,4 +190,10 @@
     <string name="vod_pack_no_space">Spațiu insuficient pentru a importa acest pachet</string>
     <string name="vod_pack_no_images">Nicio imagine în acest zip</string>
     <string name="vod_pack_unreadable">Acest zip nu a putut fi citit</string>
+
+    <string name="vod_rec_filter_empty">Nicio înregistrare în acest filtru.</string>
+    <string name="vod_rec_filter_all">Toate</string>
+    <string name="vod_rec_filter_upcoming">Viitoare</string>
+    <string name="vod_rec_filter_finished">Finalizate</string>
+    <string name="vod_rec_filter_issues">Probleme</string>
 </resources>

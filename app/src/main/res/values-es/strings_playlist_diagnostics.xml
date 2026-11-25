@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="set_a_test_playlist">Probar la conexión</string>
+    <string name="set_a_test_playlist_expl">Comprueba los datos de acceso y cuenta los canales y títulos disponibles</string>
+    <string name="set_a_testing_playlist">Comprobando los datos de acceso y el catálogo…</string>
+</resources>

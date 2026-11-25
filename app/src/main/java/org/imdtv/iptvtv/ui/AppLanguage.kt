@@ -30,13 +30,24 @@ object AppLanguage {
             // The system stores it and recreates the activity.
             activity.getSystemService(LocaleManager::class.java).applicationLocales =
                 if (tag.isEmpty()) LocaleList.getEmptyLocaleList() else LocaleList.forLanguageTags(tag)
+            applyDefault(activity)
             return
         }
         activity.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString(KEY, tag).commit()
         // Strings made outside the screen (notices, errors) come from the app's context: switch it too.
         val app = activity.applicationContext
         @Suppress("DEPRECATION") app.resources.updateConfiguration(localized(app, tag).resources.configuration, app.resources.displayMetrics)
+        applyDefault(activity)
         activity.recreate()
+    }
+
+    /**
+     * The JVM default locale follows the app language. Code outside a screen reads it — the "TV language" behind
+     * Match TV language and the guide-source country list, and the player's default subtitle language — and the
+     * system default stays the TV's own language, so those would keep using the old one after a switch.
+     */
+    fun applyDefault(ctx: Context) {
+        Locale.setDefault(ctx.resources.configuration.locales[0] ?: Locale.getDefault())
     }
 
     /** For attachBaseContext (Application and Activity) before Android 13. */

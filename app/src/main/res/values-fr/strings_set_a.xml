@@ -297,4 +297,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Retirer les caractères spéciaux</string>
     <string name="set_a_remove_symbols_expl">Retire les petites lettres, les lettres cerclées et les symboles comme « ᴿᴬᵂ », « ⓋⒾⓅ » et « ◉ » des noms de chaîne</string>
+
+    <string name="set_a_account_check">Vérifier l\'expiration du compte</string>
+    <string name="set_a_account_not_checked">Appuyez sur OK pour vérifier la playlist active</string>
+    <string name="set_a_account_checking">Vérification de la playlist active…</string>
+    <string name="set_a_account_no_playlist">Aucune playlist active</string>
+    <string name="set_a_account_non_xtream">La playlist active n\'est pas Xtream</string>
+    <string name="set_a_account_unavailable">Expiration indisponible ; vérifiez la connexion et les identifiants</string>
+    <string name="set_a_account_last_checked">Dernière vérification %1$s</string>
 </resources>

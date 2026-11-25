@@ -297,4 +297,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Speciale tekens verwijderen</string>
     <string name="set_a_remove_symbols_expl">Verwijder kleine en omcirkelde letters en symbolen zoals “ᴿᴬᵂ”, “ⓋⒾⓅ” en “◉” uit zendernamen</string>
+
+    <string name="set_a_account_check">Vervaldatum van account controleren</string>
+    <string name="set_a_account_not_checked">Druk op OK om de actieve afspeellijst te controleren</string>
+    <string name="set_a_account_checking">Actieve afspeellijst controleren…</string>
+    <string name="set_a_account_no_playlist">Geen actieve afspeellijst</string>
+    <string name="set_a_account_non_xtream">Actieve afspeellijst is geen Xtream</string>
+    <string name="set_a_account_unavailable">Vervaldatum niet beschikbaar; controleer de verbinding en inloggegevens</string>
+    <string name="set_a_account_last_checked">Laatst gecontroleerd %1$s</string>
 </resources>

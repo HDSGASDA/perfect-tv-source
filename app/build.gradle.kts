@@ -35,8 +35,8 @@ android {
         create("managed") {
             dimension = "distribution"
             applicationIdSuffix = ".managed"
-            versionCode = providers.gradleProperty("managedVersionCode").orElse("22").get().toInt().also { require(it > 0) }
-            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.2-managed.10").get()
+            versionCode = providers.gradleProperty("managedVersionCode").orElse("27").get().toInt().also { require(it > 0) }
+            versionName = providers.gradleProperty("managedVersionName").orElse("0.6.2-managed.15").get()
             buildConfigField("boolean", "MANAGED", "true")
             buildConfigField("String", "PANEL_BASE_URL", "\"$panelUrl\"")
         }
@@ -83,6 +83,17 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true // java.time and java.util.stream on Android 7.1
+    }
+
+    lint {
+        // CI runs lintManagedDebug: a real error (an API level below minSdk, a wrong constant, a stale locale read)
+        // must fail the build. Known false positives and deliberate choices are listed in app/lint.xml.
+        abortOnError = true
+        warningsAsErrors = false
+        checkReleaseBuilds = false // the release workflow builds a signed APK; lint runs on the debug variant in CI
+        lintConfig = file("lint.xml")
+        xmlReport = true
+        htmlReport = true
     }
 
     testOptions {

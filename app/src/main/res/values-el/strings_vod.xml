@@ -188,4 +188,10 @@
     <string name="vod_pack_no_space">Δεν υπάρχει αρκετός χώρος για εισαγωγή αυτού του πακέτου</string>
     <string name="vod_pack_no_images">Δεν υπάρχουν εικόνες σε αυτό το zip</string>
     <string name="vod_pack_unreadable">Δεν ήταν δυνατή η ανάγνωση αυτού του zip</string>
+
+    <string name="vod_rec_filter_empty">Δεν υπάρχουν εγγραφές σε αυτό το φίλτρο.</string>
+    <string name="vod_rec_filter_all">Όλες</string>
+    <string name="vod_rec_filter_upcoming">Επερχόμενες</string>
+    <string name="vod_rec_filter_finished">Ολοκληρωμένες</string>
+    <string name="vod_rec_filter_issues">Προβλήματα</string>
 </resources>

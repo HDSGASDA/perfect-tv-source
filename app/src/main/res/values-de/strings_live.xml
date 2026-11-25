@@ -103,4 +103,6 @@
     <string name="live_menu_merge_options">Zusammenführen</string>
     <string name="live_menu_merge_options_title">Zusammenführen · %1$s</string>
     <string name="live_rail_jump_hint">Hoch halten: oben / vorige Playlist\nRunter halten: nächste Playlist / unten</string>
+
+    <string name="live_retry">Erneut versuchen</string>
 </resources>

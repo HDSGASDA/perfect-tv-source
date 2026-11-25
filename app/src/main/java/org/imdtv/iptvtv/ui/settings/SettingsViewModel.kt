@@ -259,7 +259,8 @@ class SettingsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    val tvLanguage: String = tvLanguage()
+    // A getter, not a fixed value: this view model outlives a language change, and Match TV language must follow it.
+    val tvLanguage: String get() = tvLanguage()
 
     /** On: show only the TV's language (and categories with none detected); new categories at sync follow it. Off: show all. */
     fun setMatchTvLanguage(on: Boolean) = launchFor { p ->

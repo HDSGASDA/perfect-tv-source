@@ -319,4 +319,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Usuń znaki specjalne</string>
     <string name="set_a_remove_symbols_expl">Usuwa małe i otoczone kółkiem litery oraz symbole, np. „ᴿᴬᵂ”, „ⓋⒾⓅ” i „◉”, z nazw kanałów</string>
+
+    <string name="set_a_account_check">Sprawdź wygaśnięcie konta</string>
+    <string name="set_a_account_not_checked">Naciśnij OK, aby sprawdzić aktywną playlistę</string>
+    <string name="set_a_account_checking">Sprawdzanie aktywnej playlisty…</string>
+    <string name="set_a_account_no_playlist">Brak aktywnej playlisty</string>
+    <string name="set_a_account_non_xtream">Aktywna playlista nie jest Xtream</string>
+    <string name="set_a_account_unavailable">Data wygaśnięcia niedostępna; sprawdź połączenie i dane logowania</string>
+    <string name="set_a_account_last_checked">Ostatnio sprawdzono %1$s</string>
 </resources>

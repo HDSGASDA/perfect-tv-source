@@ -308,4 +308,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Elimină caracterele speciale</string>
     <string name="set_a_remove_symbols_expl">Elimină literele mici sau încercuite și simbolurile precum „ᴿᴬᵂ”, „ⓋⒾⓅ” și „◉” din numele canalelor</string>
+
+    <string name="set_a_account_check">Verifică expirarea contului</string>
+    <string name="set_a_account_not_checked">Apasă OK pentru a verifica lista activă</string>
+    <string name="set_a_account_checking">Se verifică lista activă…</string>
+    <string name="set_a_account_no_playlist">Nicio listă activă</string>
+    <string name="set_a_account_non_xtream">Lista activă nu este Xtream</string>
+    <string name="set_a_account_unavailable">Expirarea nu este disponibilă; verifică conexiunea și datele de autentificare</string>
+    <string name="set_a_account_last_checked">Ultima verificare %1$s</string>
 </resources>

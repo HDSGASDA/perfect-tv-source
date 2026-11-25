@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Media3's player, track selection and subtitle APIs are all @UnstableApi. We depend on that library
+         deliberately and track its releases; the annotation is not a defect in our use of it. -->
+    <issue id="UnsafeOptInUsageError" severity="ignore" />
+
+    <!-- FocusRequester() must be created inside remember. These calls put one into a map that is itself
+         remembered (`remember { mutableMapOf<Long, FocusRequester>() }`), which lint cannot see through. -->
+    <issue id="RememberInComposition">
+        <ignore path="src/main/java/org/imdtv/iptvtv/ui/settings/EpgSettings.kt" />
+        <ignore path="src/main/java/org/imdtv/iptvtv/ui/settings/PlaylistSettings.kt" />
+        <ignore path="src/main/java/org/imdtv/iptvtv/recording/RecordingsScreen.kt" />
+    </issue>
+
+    <!-- Deliberate: the language must be on disk before activity.recreate() reads it back. -->
+    <issue id="ApplySharedPref">
+        <ignore path="src/main/java/org/imdtv/iptvtv/ui/AppLanguage.kt" />
+    </issue>
+
+    <!-- Deliberate: the gate needs the saved PIN before anything can ask it, so the first read is blocking. -->
+    <issue id="BlockingMethodDetector">
+        <ignore path="src/main/java/org/imdtv/iptvtv/AppContainer.kt" />
+    </issue>
+
+    <!-- The SDK path is written by Android Studio per machine and never committed; its separators are not ours. -->
+    <issue id="PropertyEscape" severity="ignore" />
+
+    <!-- Counts in short labels ("5 hidden"), where a plural form per language would read worse on a TV row. -->
+    <issue id="PluralsCandidate" severity="informational" />
+    <issue id="TypographyEllipsis" severity="informational" />
+    <issue id="UnusedResources" severity="informational" />
+</lint>

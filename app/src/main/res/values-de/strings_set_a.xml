@@ -297,4 +297,12 @@
     </plurals>
     <string name="set_a_remove_symbols">Sonderzeichen entfernen</string>
     <string name="set_a_remove_symbols_expl">Hochgestellte und eingekreiste Buchstaben sowie Symbole wie „ᴿᴬᵂ“, „ⓋⒾⓅ“ und „◉“ aus Sendernamen entfernen</string>
+
+    <string name="set_a_account_check">Konto-Ablauf prüfen</string>
+    <string name="set_a_account_not_checked">Drücke OK, um die aktive Playlist zu prüfen</string>
+    <string name="set_a_account_checking">Prüfe aktive Playlist…</string>
+    <string name="set_a_account_no_playlist">Keine aktive Playlist</string>
+    <string name="set_a_account_non_xtream">Aktive Playlist ist kein Xtream</string>
+    <string name="set_a_account_unavailable">Ablaufdatum nicht verfügbar; prüfe Verbindung und Login</string>
+    <string name="set_a_account_last_checked">Zuletzt geprüft %1$s</string>
 </resources>
